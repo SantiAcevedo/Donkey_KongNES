@@ -6,17 +6,17 @@ export class Preloader extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'public/assets/background.png');
-        this.load.image('floorbricks', 'public/assets/floorbricks.png');
+        this.load.image('background', '/assets/background.png');
+        this.load.image('floorbricks', '/assets/floorbricks.png');
 
         // Cargar el spritesheet de Mario
-        this.load.spritesheet('mario', 'public/assets/jumpman.png', {
+        this.load.spritesheet('mario', '/assets/jumpman.png', {
             frameWidth: 36, // Ancho de cada frame
             frameHeight: 34 // Alto de cada frame
         });
 
         //cargar spritesheet de donkey kong
-        this.load.spritesheet('dk', 'public/assets/Donkey_Kong.png', {
+        this.load.spritesheet('dk', '/assets/Donkey_Kong.png', {
             frameWidth: 46, // Ancho de cada frame
             frameHeight: 31 // Alto de cada frame
         });

@@ -17,11 +17,16 @@ export class Game extends Phaser.Scene {
             this.platforms.create(x, 755, 'floorbricks');
         }
         
-        // Agregar plataformas en distintas alturas
-        this.platforms.create(200, 650, 'floorbricks');
-        this.platforms.create(470, 570, 'floorbricks');
-        this.platforms.create(750, 500, 'floorbricks');
-        this.platforms.create(850, 670, 'floorbricks');
+        // Agregar plataformas en forma de escalera con un bucle
+        let startX = 800; // Posición inicial en X
+        let startY = 650; // Posición inicial en Y
+        let stepX = -128;  // Diferencia de X entre cada escalón
+        let stepY = -6;  // Diferencia de Y entre cada escalón
+        
+        for (let i = 0; i < 6; i++) {  // Número de escalones
+            this.platforms.create(startX + (i * stepX), startY + (i * stepY), 'floorbricks');
+        }
+        
         this.platforms.create(200, 170, 'floorbricks');
         this.platforms.create(350, 130, 'floorbricks');
         
@@ -31,7 +36,12 @@ export class Game extends Phaser.Scene {
         this.mario.setCollideWorldBounds(true);
         
         // Colisión con plataformas
-        this.physics.add.collider(this.mario, this.platforms);
+        this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
+        
+        // Ajustar el tamaño del cuerpo de colisión para facilitar el movimiento en escalones
+        this.mario.body.setSize(this.mario.width * 0.6, this.mario.height * 0.5);
+        this.mario.body.setOffset(this.mario.width * 0.2, this.mario.height * 0.5);
+        
         
         // Crear animaciones
         this.anims.create({
@@ -73,7 +83,7 @@ export class Game extends Phaser.Scene {
             frames: this.anims.generateFrameNumbers('dk', { start: 0, end: 2 }),
             frameRate: 2, // Ajusta la velocidad si es necesario
             repeat: -1 // Se repite infinitamente
-            });
+        });
 
         // DK inicia con la animación "dk_idle"
         this.dk.play('dk_idle');
@@ -92,7 +102,7 @@ export class Game extends Phaser.Scene {
             frames: this.anims.generateFrameNumbers('pauline', { start: 0, end: 1 }),
             frameRate: 1, // Ajusta la velocidad si es necesario
             repeat: -1 // Se repite infinitamente
-            });
+        });
     }
 
     update() {
@@ -118,4 +128,14 @@ export class Game extends Phaser.Scene {
             this.mario.play('jump', true);
         }
     }
+
+    handlePlatformCollision(mario, platform) {
+        if (mario.body.touching.right) {
+            mario.setVelocityY(-150); // Empuje hacia arriba al chocar desde la derecha
+        } 
+        if (mario.body.touching.left) {
+            mario.setVelocityY(-150); // Empuje hacia arriba al chocar desde la izquierda
+        }
+    }
+    
 }
