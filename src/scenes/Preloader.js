@@ -6,8 +6,13 @@ export class Preloader extends Phaser.Scene {
     }
 
     preload() {
+
+    //IMAGENES
+
         this.load.image('background', '/assets/background.png');
         this.load.image('floorbricks', '/assets/floorbricks.png');
+
+    //SPRITESHEETS
 
         // Cargar el spritesheet de Mario
         this.load.spritesheet('mario', '/assets/jumpman.png', {
@@ -26,6 +31,13 @@ export class Preloader extends Phaser.Scene {
             frameWidth: 15, // Ancho de cada frame
             frameHeight: 22 // Alto de cada frame
         });
+
+        this.load.spritesheet('oil', '/assets/oil.png', {
+            frameWidth: 16, // Ancho de cada frame
+            frameHeight: 24 // Alto de cada frame
+        });
+
+    //AUDIO
     }
     
 
