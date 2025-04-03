@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 export class Game extends Phaser.Scene {
     constructor() {
         super('Game');
+        this.lives = 3; // Mario comienza con 3 vidas
     }
 
     create() {
@@ -69,8 +70,8 @@ export class Game extends Phaser.Scene {
         }
         
         this.platforms.create(135, 207, 'floorbricks').setScale(0.7).refreshBody();
-        this.platforms.create(320, 160, 'floorbricks').setScale(0.7).refreshBody();
-        this.platforms.create(410, 140, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(320, 130, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(410, 105, 'floorbricks').setScale(0.7).refreshBody();
         
         
         // Crear Mario con físicas
@@ -132,7 +133,7 @@ export class Game extends Phaser.Scene {
         this.dk.play('dk_idle');
 
         //Crear a Pauline
-        this.pauline = this.physics.add.sprite(320, 130, 'pauline').setScale(2);
+        this.pauline = this.physics.add.sprite(320, 100, 'pauline').setScale(2);
         this.pauline.setBounce(0.1);
         this.pauline.setCollideWorldBounds(true);
 
@@ -164,6 +165,51 @@ export class Game extends Phaser.Scene {
         });
         this.oil.play('oil');
 
+
+        //Crear grupo de barrels
+        this.barrels = this.physics.add.group();
+        //Animaciones de barrels
+        this.anims.create({
+            key: 'barrelRoll',
+            frames: this.anims.generateFrameNumbers('barrel', { start: 0, end: 3 }),
+            frameRate: 5,
+            repeat: -1
+        });
+
+        // Colisión entre Mario y los barriles
+        this.physics.add.collider(this.mario, this.barrels, this.hitByBarrel, null, this);
+        
+
+        this.barrelHeights = [705, 600, 490, 390, 290]; // Alturas donde los barriles cambian de dirección
+
+        this.time.addEvent({
+            delay: 3000,
+            loop: true,
+            callback: this.throwBarrel,
+            callbackScope: this
+        });
+    }
+
+    throwBarrel() {
+        let barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
+        barrel.setScale(2.7);
+        barrel.setBounce(0.2);
+        barrel.setVelocityX(100);
+        barrel.setGravityY(300);
+        barrel.direction = 1;
+        this.physics.add.collider(barrel, this.platforms);
+        barrel.play('barrelRoll');
+
+    }
+    hitByBarrel(mario, barrel) {
+        this.lives -= 1;
+        console.log(`Vidas restantes: ${this.lives}`);
+        if (this.lives <= 0) {
+            this.scene.start('GameOver');
+        } else {
+            this.mario.setX(250);
+            this.mario.setY(710);
+        }
     }
 
     update() {
@@ -188,6 +234,16 @@ export class Game extends Phaser.Scene {
             this.mario.setVelocityY(-330);
             this.mario.play('jump', true);
         }
+        this.barrels.children.iterate(barrel => {
+            if (barrel) {
+                this.barrelHeights.forEach(height => {
+                    if (Math.abs(barrel.y - height) < 5) {
+                        barrel.direction *= -1;
+                        barrel.setVelocityX(100 * barrel.direction);
+                    }
+                });
+            }
+        });
     }
 
     handlePlatformCollision(mario, platform) {

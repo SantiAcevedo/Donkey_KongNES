@@ -37,6 +37,11 @@ export class Preloader extends Phaser.Scene {
             frameHeight: 24 // Alto de cada frame
         });
 
+        this.load.spritesheet('barrel', '/assets/barrel.png', {
+            frameWidth: 15, // Ancho de cada frame
+            frameHeight: 10 // Alto de cada frame
+        });
+
     //AUDIO
     }
     
