@@ -4,6 +4,7 @@ export class Game extends Phaser.Scene {
     constructor() {
         super('Game');
         this.lives = 3; // Mario comienza con 3 vidas
+        this.score = 0; // Contador de puntos
     }
 
     create() {
@@ -73,7 +74,9 @@ export class Game extends Phaser.Scene {
         this.platforms.create(320, 130, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(410, 105, 'floorbricks').setScale(0.7).refreshBody();
         
-        
+        // Configuración de puntuación visual
+        this.scoreText = this.add.text(800, 20, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+
         // Crear Mario con físicas
         this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.8);
         this.mario.setBounce(0.1);
@@ -144,8 +147,8 @@ export class Game extends Phaser.Scene {
         this.anims.create({
             key: 'pauline_idle',
             frames: this.anims.generateFrameNumbers('pauline', { start: 0, end: 1 }),
-            frameRate: 4, // Ajusta la velocidad si es necesario
-            repeat: -2 // Se repite infinitamente
+            frameRate:3, // Ajusta la velocidad si es necesario
+            repeat: -1 // Se repite infinitamente
         });
         // Pau inicia con la animación "paline_idle"
         this.pauline.play('pauline_idle');
@@ -166,6 +169,11 @@ export class Game extends Phaser.Scene {
         this.oil.play('oil');
 
 
+        this.physics.add.overlap(this.mario, this.stairs, () => {
+            this.onStairs = true;
+        }, null, this);
+
+
         //Crear grupo de barrels
         this.barrels = this.physics.add.group();
         //Animaciones de barrels
@@ -180,7 +188,7 @@ export class Game extends Phaser.Scene {
         this.physics.add.collider(this.mario, this.barrels, this.hitByBarrel, null, this);
         
 
-        this.barrelHeights = [705, 600, 490, 390, 290]; // Alturas donde los barriles cambian de dirección
+        this.barrelHeights = [675, 570, 460, 360, 260]; // Alturas donde los barriles cambian de dirección
 
         this.time.addEvent({
             delay: 3000,
@@ -199,6 +207,8 @@ export class Game extends Phaser.Scene {
         barrel.direction = 1;
         this.physics.add.collider(barrel, this.platforms);
         barrel.play('barrelRoll');
+        barrel.scored = false;
+
 
     }
     hitByBarrel(mario, barrel) {
@@ -213,9 +223,11 @@ export class Game extends Phaser.Scene {
     }
 
     update() {
+
+        this.onStairs = false;
         // Reiniciar velocidad
         this.mario.setVelocityX(0);
-
+    
         // Movimiento
         if (this.cursors.left.isDown) {
             this.mario.setVelocityX(-160);
@@ -228,24 +240,42 @@ export class Game extends Phaser.Scene {
         } else {
             this.mario.play('idle', true);
         }
-
+    
         // Salto
         if (this.cursors.up.isDown && this.mario.body.touching.down) {
             this.mario.setVelocityY(-330);
             this.mario.play('jump', true);
         }
+    
+        // Lógica de los barriles
         this.barrels.children.iterate(barrel => {
             if (barrel) {
+                // Cambiar dirección si alcanza ciertas alturas
                 this.barrelHeights.forEach(height => {
                     if (Math.abs(barrel.y - height) < 5) {
                         barrel.direction *= -1;
                         barrel.setVelocityX(100 * barrel.direction);
                     }
                 });
+    
+            // Inicializar la propiedad si no existe
+            if (barrel.scored === undefined) {
+                barrel.scored = false;
             }
-        });
-    }
-
+            
+            if (
+                !barrel.scored &&
+                this.mario.body.velocity.y > 0 && // Mario viene cayendo
+                barrel.y > this.mario.y && // Barril ahora está abajo
+                Math.abs(this.mario.x - barrel.x) < 50
+            ) {
+                this.score += 100;
+                barrel.scored = true;
+                this.scoreText.setText('Score: ' + this.score);
+            }
+        }
+    });
+  }    
     handlePlatformCollision(mario, platform) {
         if (mario.body.touching.right) {
             mario.setVelocityY(-150); // Empuje hacia arriba al chocar desde la derecha

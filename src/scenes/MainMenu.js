@@ -9,18 +9,21 @@ export class MainMenu extends Scene
 
     create ()
     {
-        this.add.image(512, 384, 'background');
+        this.cameras.main.setBackgroundColor('#00000a');
 
-        this.add.text(512, 460, 'PLAY!', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5);
+        // Imagen de fondo del menú
+        this.add.image(510, 380, 'menu').setOrigin(0.5).setScale(1.7); 
 
-        this.input.once('pointerdown', () => {
+        // Imagen del jugador (botón interactivo)
+        const playerImage = this.add.image(512, 430, 'player').setOrigin(0.5).setScale(1.4);
 
+        // Hacerla interactiva
+        playerImage.setInteractive();
+
+        // Al hacer clic, pasar a la escena 'Game'
+        playerImage.on('pointerdown', () => {
             this.scene.start('Game');
-
         });
     }
 }
+
