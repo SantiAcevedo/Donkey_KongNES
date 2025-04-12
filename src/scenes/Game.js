@@ -5,6 +5,9 @@ export class Game extends Phaser.Scene {
         super('Game');
         this.lives = 3; // Mario comienza con 3 vidas
         this.score = 0; // Contador de puntos
+        this.isFloating = false;
+        this.floatTimer = null;
+
     }
 
     create() {
@@ -81,6 +84,8 @@ export class Game extends Phaser.Scene {
         this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.8);
         this.mario.setBounce(0.1);
         this.mario.setCollideWorldBounds(true);
+        this.mario.body.setGravityY(300); // Valor base, ajustable
+
         
         // Colisión con plataformas
         this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
@@ -196,11 +201,19 @@ export class Game extends Phaser.Scene {
             callback: this.throwBarrel,
             callbackScope: this
         });
+        // Crear un solo martillo en la posición deseada
+        this.hammer = this.physics.add.sprite(150, 260, 'hammer').setScale(2.8); 
+        this.hammer.setImmovable(true);
+        this.hammer.body.allowGravity = false;
+        this.hammer = this.physics.add.sprite(150, 500, 'hammer').setScale(2.8); 
+        this.hammer.setImmovable(true);
+        this.hammer.body.allowGravity = false;
+
     }
 
     throwBarrel() {
         let barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
-        barrel.setScale(2.7);
+        barrel.setScale(3);
         barrel.setBounce(0.2);
         barrel.setVelocityX(100);
         barrel.setGravityY(300);
@@ -275,6 +288,21 @@ export class Game extends Phaser.Scene {
             }
         }
     });
+        if (this.cursors.up.isDown && this.mario.body.touching.down) {
+            this.mario.setVelocityY(-330);
+            this.mario.play('jump', true);
+        
+            // Activar el "flotado"
+            this.isFloating = true;
+            this.mario.body.setGravityY(100); // Gravedad más suave
+        
+            // Volver a la gravedad normal luego de 1 segundo
+            if (this.floatTimer) this.floatTimer.remove(); // Borra el anterior si existe
+            this.floatTimer = this.time.delayedCall(1000, () => {
+                this.mario.body.setGravityY(300); // Valor normal o el que uses en tu juego
+                this.isFloating = false;
+            });
+        } 
   }    
     handlePlatformCollision(mario, platform) {
         if (mario.body.touching.right) {

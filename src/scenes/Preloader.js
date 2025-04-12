@@ -13,6 +13,7 @@ export class Preloader extends Phaser.Scene {
         this.load.image('menu','/assets/menu_background.png');
         this.load.image('player','/assets/menu_1player_button.png');
         this.load.image('stairs','/assets/stairs_red.png');
+        this.load.image('hammer','/assets/hammer.png');
     //SPRITESHEETS
 
         // Cargar el spritesheet de Mario
