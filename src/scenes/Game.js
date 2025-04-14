@@ -73,8 +73,9 @@ export class Game extends Phaser.Scene {
         }
         
         this.platforms.create(135, 207, 'floorbricks').setScale(0.7).refreshBody();
-        this.platforms.create(320, 130, 'floorbricks').setScale(0.7).refreshBody();
-        this.platforms.create(410, 105, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(320, 145, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(410, 125, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(498, 125, 'floorbricks').setScale(0.7).refreshBody();
         
         // Configuración de puntuación visual
         this.scoreText = this.add.text(800, 20, 'Score: 0', { fontSize: '32px', fill: '#fff' });
@@ -153,21 +154,24 @@ export class Game extends Phaser.Scene {
 
         // Crear grupo de escaleras y generar escalera(s) con la función generateLadder
         this.stairs = this.physics.add.staticGroup();
+
         // Por ejemplo, genera una escalera en (500,680) con 5 escalones y separación de 32px
-        this.generateLadder(380, 740, 3, 32);//primera plataforma
-        this.generateLadder(830, 730, 2, 32);
-        this.generateLadder(245, 640, 3, 32);//segunda plataforma
-        this.generateLadder(450, 640, 3, 32);
-        this.generateLadder(350, 550, 4, 32);//tercera plataforma
-        this.generateLadder(500, 530, 3, 32);
-        this.generateLadder(830, 510, 2, 32);
-        this.generateLadder(390, 430, 3, 32);//cuarta plataforma
-        this.generateLadder(245, 430, 3, 32);
-        this.generateLadder(780, 450, 4, 32);
-        this.generateLadder(450, 330, 4, 32);//quinta plataforma
-        this.generateLadder(830, 310, 2, 32);
-        
-        
+        this.generateLadder(380, 715, 4, 16, "ladder", 4);//primera plataforma
+        this.generateLadder(860, 730, 4, 16, "ladder", 4);
+        this.generateLadder(245, 640, 5, 16, "ladder", 4);//segunda plataforma
+        this.generateLadder(450, 648, 6, 16, "ladder", 4);
+        this.generateLadder(350, 545, 7, 16, "ladder", 4);//tercera plataforma
+        this.generateLadder(500, 535, 6, 16, "ladder", 4);
+        this.generateLadder(1640, 530, 9, 16, "ladder", 4);
+        this.generateLadder(390, 425, 5, 16, "ladder", 4);//cuarta plataforma
+        this.generateLadder(245, 414, 4, 16, "ladder", 4);
+        this.generateLadder(7160, 450, 4, 16, "ladder", 4);
+        this.generateLadder(450, 258, 3, 16, "ladder", 4);//quinta plataforma
+        this.generateLadder(450, 340, 3, 16, "ladder", 4)
+        this.generateLadder(630, 310, 5, 16, "ladder", 4);
+        this.generateLadder(525, 185, 5, 16, "ladder", 4);//ultima plataforma
+        this.generateLadder(380, 185, 5, 16, "ladder", 4);//plataforma pauline
+        this.generateLadder(330, 185, 5, 16, "ladder", 4);//plataforma pauline
 
         // Ajustar la profundidad de la escalera para que Mario se muestre por encima
         this.stairs.children.iterate((ladder) => {
@@ -212,12 +216,12 @@ export class Game extends Phaser.Scene {
     }
 
     // Función modular para generar escaleras
-    generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder') {
+    generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder', scale = 1) {
         for (let i = 0; i < numSteps; i++) {
-            this.stairs.create(x, y - i * stepSpacing, key);
+            this.stairs.create(x, y - i * stepSpacing, key).setScale(scale);
         }
     }
-
+    
     throwBarrel() {
         let barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
         barrel.setScale(3);
