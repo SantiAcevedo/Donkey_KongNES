@@ -7,22 +7,23 @@ export class Game extends Phaser.Scene {
         this.score = 0;          // Contador de puntos
         this.isFloating = false;
         this.floatTimer = null;
+        this.isClimbing = false; // Flag para controlar animación de escalada
+        this.firstBarrelThrown = false; // Para diferenciar el primer barril
     }
 
     create() {
         // Fondo y piso
         this.cameras.main.setBackgroundColor('#00000a');
-        
+
         // Crear grupo de plataformas
         this.platforms = this.physics.add.staticGroup();
-        
-        // Agregar suelo principal
-        for (let x = 0; x < 1024; x += 50) {
+
+        // Agregar suelo principal (incremento de 95 para evitar solapamientos)
+        for (let x = 0; x < 1024; x += 95) {
             this.platforms.create(x, 770, 'floorbricks');
         }
-        
-        // Generar escalones de las plataformas con bucles (ya tenés la misma lógica)
-        // Plataforma en forma de escalera (usando un bucle)
+
+        // Generar escalones de las plataformas con bucles
         let startX = 860; 
         let startY = 685;
         let stepX = -90;
@@ -31,8 +32,7 @@ export class Game extends Phaser.Scene {
             let escalon = this.platforms.create(startX + (i * stepX), startY + (i * stepY), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
         }
-        
-        // Plataforma 01
+
         let startX1 = 180;
         let startY1 = 580;
         let stepX1 = 90;
@@ -41,8 +41,7 @@ export class Game extends Phaser.Scene {
             let escalon = this.platforms.create(startX1 + (i * stepX1), startY1 + (i * stepY1), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
         }
-        
-        // Plataforma 02
+
         let startX2 = 845;
         let startY2 = 470;
         let stepX2 = -90;
@@ -51,8 +50,7 @@ export class Game extends Phaser.Scene {
             let escalon = this.platforms.create(startX2 + (i * stepX2), startY2 + (i * stepY2), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
         }
-        
-        // Plataforma 03
+
         let startX3 = 180;
         let startY3 = 370;
         let stepX3 = 90;
@@ -61,8 +59,7 @@ export class Game extends Phaser.Scene {
             let escalon = this.platforms.create(startX3 + (i * stepX3), startY3 + (i * stepY3), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
         }
-        
-        // Plataforma 04
+
         let startX4 = 815;
         let startY4 = 270;
         let stepX4 = -85;
@@ -71,13 +68,13 @@ export class Game extends Phaser.Scene {
             let escalon = this.platforms.create(startX4 + (i * stepX4), startY4 + (i * stepY4), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
         }
-        
+
         this.platforms.create(135, 207, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(320, 145, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(410, 125, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(498, 125, 'floorbricks').setScale(0.7).refreshBody();
-        
-        // Configuración de puntuación visual
+
+        // Configuración de la puntuación
         this.scoreText = this.add.text(800, 20, 'Score: 0', { fontSize: '32px', fill: '#fff' });
 
         // Crear Mario con físicas
@@ -85,15 +82,15 @@ export class Game extends Phaser.Scene {
         this.mario.setBounce(0.1);
         this.mario.setCollideWorldBounds(true);
         this.mario.body.setGravityY(300);
-        
-        // Colisión con plataformas (la callback se usa para detectar escalera y evitar empuje)
+
+        // Colisión con plataformas
         this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
-        
+
         // Ajustar cuerpo para facilitar el movimiento en escalones
         this.mario.body.setSize(this.mario.width * 0.6, this.mario.height * 0.5);
         this.mario.body.setOffset(this.mario.width * 0.2, this.mario.height * 0.5);
-        
-        // Crear animaciones de Mario
+
+        // Animaciones de Mario
         this.anims.create({
             key: 'idle',
             frames: [{ key: 'mario', frame: 0 }],
@@ -109,6 +106,34 @@ export class Game extends Phaser.Scene {
             key: 'jump',
             frames: [{ key: 'mario', frame: 5 }],
             frameRate: 2
+        });
+        this.anims.create({
+            key: 'climb',
+            frames: this.anims.generateFrameNumbers('mario', { start: 4, end: 5 }),
+            frameRate: 5,
+            repeat: -1
+        });
+
+        // Animación para oil: reproducirá frames 1 y 2 cíclicamente
+        this.anims.create({
+            key: 'oilAnim',
+            frames: this.anims.generateFrameNumbers('oil', { start: 1, end: 2 }),
+            frameRate: 5,
+            repeat: -1
+        });
+
+        // Animaciones para cuando Mario tiene martillo:
+        this.anims.create({
+            key: 'hammerIdle',
+            frames: this.anims.generateFrameNumbers('mario', { start: 8, end: 9 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'hammerWalk',
+            frames: this.anims.generateFrameNumbers('mario', { start: 12, end: 15 }),
+            frameRate: 10,
+            repeat: -1
         });
 
         // Teclado
@@ -141,39 +166,32 @@ export class Game extends Phaser.Scene {
         });
         this.pauline.play('pauline_idle');
 
-        // Agregar oil
+        // Agregar oil: iniciamos en frame 0
         this.oil = this.physics.add.sprite(180, 720, 'oil').setScale(2.6);
+        this.oil.setFrame(0);
         this.physics.add.collider(this.oil, this.platforms);
-        this.anims.create({
-            key: 'oil',
-            frames: this.anims.generateFrameNumbers('oil', { start: 1, end: 2 }),
-            frameRate: 3,
-            repeat: -1
-        });
-        this.oil.play('oil');
+        // La animación "oilAnim" se activará al colisionar con el primer barril
 
-        // Crear grupo de escaleras y generar escalera(s) con la función generateLadder
+        // Crear grupo de escaleras y generar escaleras
         this.stairs = this.physics.add.staticGroup();
-
-        // Por ejemplo, genera una escalera en (500,680) con 5 escalones y separación de 32px
-        this.generateLadder(380, 715, 4, 16, "ladder", 4);//primera plataforma
+        this.generateLadder(380, 715, 4, 16, "ladder", 4);    // primera plataforma
         this.generateLadder(860, 730, 4, 16, "ladder", 4);
-        this.generateLadder(245, 640, 5, 16, "ladder", 4);//segunda plataforma
+        this.generateLadder(245, 640, 5, 16, "ladder", 4);    // segunda plataforma
         this.generateLadder(450, 648, 6, 16, "ladder", 4);
-        this.generateLadder(350, 545, 7, 16, "ladder", 4);//tercera plataforma
+        this.generateLadder(350, 545, 7, 16, "ladder", 4);    // tercera plataforma
         this.generateLadder(500, 535, 6, 16, "ladder", 4);
         this.generateLadder(1640, 530, 9, 16, "ladder", 4);
-        this.generateLadder(390, 425, 5, 16, "ladder", 4);//cuarta plataforma
+        this.generateLadder(390, 425, 5, 16, "ladder", 4);    // cuarta plataforma
         this.generateLadder(245, 414, 4, 16, "ladder", 4);
         this.generateLadder(7160, 450, 4, 16, "ladder", 4);
-        this.generateLadder(450, 258, 3, 16, "ladder", 4);//quinta plataforma
-        this.generateLadder(450, 340, 3, 16, "ladder", 4)
+        this.generateLadder(450, 258, 3, 16, "ladder", 4);    // quinta plataforma
+        this.generateLadder(450, 340, 3, 16, "ladder", 4);
         this.generateLadder(630, 310, 5, 16, "ladder", 4);
-        this.generateLadder(525, 185, 5, 16, "ladder", 4);//ultima plataforma
-        this.generateLadder(380, 185, 5, 16, "ladder", 4);//plataforma pauline
-        this.generateLadder(330, 185, 5, 16, "ladder", 4);//plataforma pauline
+        this.generateLadder(525, 185, 5, 16, "ladder", 4);    // última plataforma
+        this.generateLadder(380, 190, 9, 16, "ladder", 4);    // plataforma pauline
+        this.generateLadder(320, 190, 9, 16, "ladder", 4);    // plataforma pauline
 
-        // Ajustar la profundidad de la escalera para que Mario se muestre por encima
+        // Ajustar profundidad de escaleras para que Mario se muestre sobre ellas
         this.stairs.children.iterate((ladder) => {
             ladder.setDepth(0);
         });
@@ -195,6 +213,13 @@ export class Game extends Phaser.Scene {
             frameRate: 5,
             repeat: -1
         });
+        this.anims.create({
+            key: 'barrelFirstAnim',
+            frames: this.anims.generateFrameNumbers('barrel', { start: 4, end: 7 }), // Ajustá estos valores según tu spritesheet
+            frameRate: 4,
+            repeat: -1
+        });
+        
         this.physics.add.collider(this.mario, this.barrels, this.hitByBarrel, null, this);
         this.barrelHeights = [675, 570, 460, 360, 260];
         this.time.addEvent({
@@ -215,22 +240,46 @@ export class Game extends Phaser.Scene {
         this.physics.add.overlap(this.mario, this.hammers, this.pickUpHammer, null, this);
     }
 
-    // Función modular para generar escaleras
+    // Función para generar escaleras
     generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder', scale = 1) {
         for (let i = 0; i < numSteps; i++) {
-            this.stairs.create(x, y - i * stepSpacing, key).setScale(scale);
+            this.stairs.create(x, y - i * stepSpacing, key).setScale(scale).refreshBody();
         }
     }
-    
+
     throwBarrel() {
-        let barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
-        barrel.setScale(3);
-        barrel.setBounce(0.2);
-        barrel.setVelocityX(100);
-        barrel.setGravityY(300);
-        barrel.direction = 1;
-        this.physics.add.collider(barrel, this.platforms);
-        barrel.play('barrelRoll');
+        let barrel;
+        if (!this.firstBarrelThrown) {
+            this.firstBarrelThrown = true;
+            barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
+            barrel.setScale(3);
+            barrel.setBounce(0.2);
+            // Lanzar el primer barril verticalmente con velocidad menor
+            barrel.setVelocity(0, 50);
+            // Marcarlo como primer barril
+            barrel.setData('isFirst', true);
+            // No se agrega collider con las plataformas para este barril
+
+            // Overlap para detectar colisión con el oil
+            this.physics.add.overlap(barrel, this.oil, (b, oil) => {
+                oil.play('oilAnim', true);
+                this.time.delayedCall(500, () => {
+                    barrel.destroy();
+                });
+            }, null, this);
+
+            // Reproducir la animación especial para el primer barril (usa tus nuevos frames)
+            barrel.play('barrelFirstAnim');
+        } else {
+            barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
+            barrel.setScale(3);
+            barrel.setBounce(0.2);
+            barrel.setVelocityX(100);
+            barrel.setGravityY(300);
+            barrel.direction = 1;
+            this.physics.add.collider(barrel, this.platforms);
+            barrel.play('barrelRoll');
+        }
         barrel.scored = false;
     }
 
@@ -241,7 +290,6 @@ export class Game extends Phaser.Scene {
             this.scoreText.setText('Score: ' + this.score);
             return;
         }
-    
         this.lives -= 1;
         console.log(`Vidas restantes: ${this.lives}`);
         if (this.lives <= 0) {
@@ -251,42 +299,57 @@ export class Game extends Phaser.Scene {
             this.mario.setY(710);
         }
     }
-    
+
     pickUpHammer(mario, hammer) {
         hammer.disableBody(true, true);
         this.hasHammer = true;
-        mario.setTint(0xffff00);
+        // Reproducir la animación idle con martillo (sin tint)
+        mario.play('hammerIdle', true);
         this.time.delayedCall(8000, () => {
             this.hasHammer = false;
-            mario.clearTint();
+            mario.play('idle', true);
         });
     }
-    
+
     update() {
-        // Al comienzo, asumimos que no está en escalera
+        // --- Detección de escalera: se activa si se presionan ↑ o ↓ y existe overlap ---
         this.onStairs = false;
-        // Detectar overlap con cualquier escalera
         this.physics.overlap(this.mario, this.stairs, (mario, ladder) => {
-            // Puedes ajustar la condición si necesitás una alineación específica
-            if (Math.abs(mario.x - ladder.x) < 10) {
+            if ((this.cursors.up.isDown || this.cursors.down.isDown) && Math.abs(mario.x - ladder.x) < 10) {
                 this.onStairs = true;
             }
         }, null, this);
-    
-        // Movimiento horizontal
-        this.mario.setVelocityX(0);
-        if (this.cursors.left.isDown) {
-            this.mario.setVelocityX(-160);
-            this.mario.anims.play('walk', true);
-            this.mario.setFlipX(true);
-        } else if (this.cursors.right.isDown) {
-            this.mario.setVelocityX(160);
-            this.mario.anims.play('walk', true);
-            this.mario.setFlipX(false);
-        } else {
-            this.mario.anims.play('idle', true);
+
+        // Movimiento horizontal (solo si no está en escalera)
+        if (!this.onStairs) {
+            this.mario.setVelocityX(0);
+            if (this.cursors.left.isDown) {
+                this.mario.setVelocityX(-160);
+                if (this.hasHammer) {
+                    this.mario.play('hammerWalk', true);
+                } else {
+                    this.mario.play('walk', true);
+                }
+                this.mario.setFlipX(true);
+            } else if (this.cursors.right.isDown) {
+                this.mario.setVelocityX(160);
+                if (this.hasHammer) {
+                    this.mario.play('hammerWalk', true);
+                } else {
+                    this.mario.play('walk', true);
+                }
+                this.mario.setFlipX(false);
+            } else {
+                if (this.mario.body.onFloor()) {
+                    if (this.hasHammer) {
+                        this.mario.play('hammerIdle', true);
+                    } else {
+                        this.mario.play('idle', true);
+                    }
+                }
+            }
         }
-    
+
         // Salto normal (solo si no está en escalera)
         if (this.cursors.up.isDown && this.mario.body.onFloor() && !this.onStairs) {
             this.mario.setVelocityY(-330);
@@ -299,41 +362,49 @@ export class Game extends Phaser.Scene {
                 this.isFloating = false;
             });
         }
-    
-        // Movimiento en escaleras
+
+        // Movimiento en escaleras: reproducir "climb" solo si se presiona la flecha arriba
         if (this.onStairs) {
-            // Desactivar la gravedad para movimiento vertical libre
             this.mario.body.setAllowGravity(false);
-            this.mario.setVelocityY(0);
-            // Si se presiona ↑, sube y deshabilitamos la colisión superior para poder atravesar la plataforma de arriba
-            if (this.cursors.up.isDown) {
+            if (this.cursors.up.isDown && !this.cursors.down.isDown) {
                 this.mario.setVelocityY(-100);
                 this.mario.body.checkCollision.up = false;
+                if (!this.isClimbing) {
+                    this.mario.play('climb', true);
+                    this.isClimbing = true;
+                }
             } else if (this.cursors.down.isDown) {
                 this.mario.setVelocityY(100);
                 this.mario.body.checkCollision.up = true;
+                if (this.isClimbing) {
+                    this.mario.play('idle', true);
+                    this.isClimbing = false;
+                }
             } else {
+                this.mario.setVelocityY(0);
                 this.mario.body.checkCollision.up = true;
             }
         } else {
             this.mario.body.setAllowGravity(true);
             this.mario.body.checkCollision.up = true;
+            this.isClimbing = false;
         }
-    
-        // Lógica de los barriles (sin cambios)
+
+        // Lógica de los barriles
         this.barrels.children.iterate(barrel => {
             if (barrel) {
-                this.barrelHeights.forEach(height => {
-                    if (Math.abs(barrel.y - height) < 5) {
-                        barrel.direction *= -1;
-                        barrel.setVelocityX(100 * barrel.direction);
-                    }
-                });
-    
+                // Aplicar cambio de dirección solo a los barriles que NO sean el primero
+                if (!barrel.getData('isFirst')) {
+                    this.barrelHeights.forEach(height => {
+                        if (Math.abs(barrel.y - height) < 5) {
+                            barrel.direction *= -1;
+                            barrel.setVelocityX(100 * barrel.direction);
+                        }
+                    });
+                }
                 if (barrel.scored === undefined) {
                     barrel.scored = false;
                 }
-    
                 if (
                     !barrel.scored &&
                     this.mario.body.velocity.y > 0 &&
@@ -347,15 +418,12 @@ export class Game extends Phaser.Scene {
             }
         });
     }
-    
-       
+
     handlePlatformCollision(mario, platform) {
-        // Si Mario está en escalera, no se aplica el empuje vertical (permite el ascenso)
         if (this.onStairs) return;
-        
         if (mario.body.touching.right) {
             mario.setVelocityY(-150);
-        } 
+        }
         if (mario.body.touching.left) {
             mario.setVelocityY(-150);
         }

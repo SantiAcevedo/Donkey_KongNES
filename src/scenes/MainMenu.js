@@ -16,6 +16,8 @@ export class MainMenu extends Scene
 
         // Imagen del jugador (botón interactivo)
         const playerImage = this.add.image(512, 430, 'player').setOrigin(0.5).setScale(1.4);
+        const playerImagen = this.add.image(512, 465, 'player2').setOrigin(0.5).setScale(1.4);
+
 
         // Hacerla interactiva
         playerImage.setInteractive();
