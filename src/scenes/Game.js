@@ -9,6 +9,7 @@ export class Game extends Phaser.Scene {
         this.floatTimer = null;
         this.isClimbing = false; // Flag para controlar animación de escalada
         this.firstBarrelThrown = false; // Para diferenciar el primer barril
+        this.marioFoundPauline = false;  // ← NUEVO: flag para detectar proximidad
     }
 
     create() {
@@ -22,6 +23,7 @@ export class Game extends Phaser.Scene {
         for (let x = 0; x < 1024; x += 95) {
             this.platforms.create(x, 770, 'floorbricks');
         }
+        
 
         // Generar escalones de las plataformas con bucles
         let startX = 860; 
@@ -165,6 +167,7 @@ export class Game extends Phaser.Scene {
             repeat: -1
         });
         this.pauline.play('pauline_idle');
+        this.marioFoundPauline = false;  // ← NUEVO
 
         // Agregar oil: iniciamos en frame 0
         this.oil = this.physics.add.sprite(180, 720, 'oil').setScale(2.6);
@@ -310,6 +313,24 @@ export class Game extends Phaser.Scene {
             mario.play('idle', true);
         });
     }
+    // Nuevo método
+    triggerRescue() {
+        this.reachedPauline = true;
+
+        // Pausar físicas
+        this.physics.world.pause();
+
+        // Pausar animaciones clave
+        this.dk.anims.pause();
+        this.pauline.anims.pause();
+        this.barrels.children.iterate(b => b.anims.pause());
+        this.mario.anims.pause();
+
+        // Tras 3 segundos, cambiar de escena
+        this.time.delayedCall(3000, () => {
+            this.scene.start('Game1');
+        });
+    }
 
     update() {
         // --- Detección de escalera: se activa si se presionan ↑ o ↓ y existe overlap ---
@@ -417,6 +438,33 @@ export class Game extends Phaser.Scene {
                 }
             }
         });
+        // ← NUEVO: Detectar proximidad a Pauline
+        if (!this.marioFoundPauline) {
+            const distance = Phaser.Math.Distance.Between(
+                this.mario.x, this.mario.y,
+                this.pauline.x, this.pauline.y
+            );
+            if (distance < 100) {  // ajustá el umbral a tu gusto
+                this.marioFoundPauline = true;
+                this.physics.pause();      // pausa la física
+                this.mario.anims.pause();  // opcional: pausa animación de Mario
+                // si querés, podés también desactivar entrada:
+                // this.input.keyboard.enabled = false;
+
+                // Esperar 3 s y lanzar la siguiente escena
+                this.time.delayedCall(3000, () => {
+                    this.scene.start('Game1');
+                });
+            }
+        }
+        const dist = Phaser.Math.Distance.Between(
+            this.mario.x, this.mario.y,
+            this.pauline.x, this.pauline.y
+        );
+        if (dist < 50) {
+            this.triggerRescue();
+            return;
+        }
     }
 
     handlePlatformCollision(mario, platform) {

@@ -4,6 +4,7 @@ import { Preloader } from './scenes/Preloader';
 import { MainMenu } from './scenes/MainMenu';
 import { Game } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
+import { Game1 } from './scenes/Game1';
 
 const config = {
     type: Phaser.AUTO,
@@ -27,6 +28,7 @@ const config = {
         Preloader,
         MainMenu,
         Game, // Asegúrate de que Game esté aquí
+        Game1,
         GameOver
     ]
 };
