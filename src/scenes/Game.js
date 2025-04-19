@@ -85,12 +85,22 @@ export class Game extends Phaser.Scene {
         this.mario.setCollideWorldBounds(true);
         this.mario.body.setGravityY(300);
 
+        // Ajuste: colisión un poquito más baja
+        const w = this.mario.width * 0.6;      
+        const h = this.mario.height * 0.8;     
+        const offsetX = (this.mario.width - w) / 2;
+        const offsetY = this.mario.height - h;
+        this.mario.body.setSize(w, h);
+        this.mario.body.setOffset(offsetX, offsetY);
+
+
+
         // Colisión con plataformas
-        this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
+        //this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
 
         // Ajustar cuerpo para facilitar el movimiento en escalones
-        this.mario.body.setSize(this.mario.width * 0.6, this.mario.height * 0.5);
-        this.mario.body.setOffset(this.mario.width * 0.2, this.mario.height * 0.5);
+        //this.mario.body.setSize(this.mario.width * 0.6, this.mario.height * 0.5);
+        //this.mario.body.setOffset(this.mario.width * 0.2, this.mario.height * 0.5);
 
         // Animaciones de Mario
         this.anims.create({
@@ -241,7 +251,76 @@ export class Game extends Phaser.Scene {
         this.hammers.create(150, 500, 'hammer').setScale(2.8);
         this.hasHammer = false;
         this.physics.add.overlap(this.mario, this.hammers, this.pickUpHammer, null, this);
+
+        this.physics.add.collider(
+            this.mario,
+            this.platforms,
+            this.handlePlatformCollision,
+            (mario, platform) => {
+              // sólo cuando viene cayendo (velocity.y > 0)
+              // y el pie de Mario está justo encima:
+              return mario.body.velocity.y > 0 &&
+                     (mario.body.bottom <= platform.body.top + 5);
+            },
+            this
+          );
+                 
+
+        // ← NUEVO: animación de Fire (frames 0 y 1)
+        this.anims.create({
+            key: 'fireAnim',
+            frames: this.anims.generateFrameNumbers('fire', { start: 0, end: 1 }),
+            frameRate: 6,
+            repeat: -1
+        });
+
+        // ← NUEVO: Grupo de fueguitos
+        this.fires = this.physics.add.group({ allowGravity: false, immovable: true });
+        // ← NUEVO: programa la aparición del fire (e.g. 8s después):
+        this.spawnFireAtOil(8000);
     }
+
+    spawnFireAtOil(delay) {
+        this.time.delayedCall(delay, () => {
+          const fire = this.fires.create(this.oil.x + 20, this.oil.y, 'fire').setScale(2.8);
+          fire.setCollideWorldBounds(true);
+          fire.play('fireAnim');
+      
+          // Calcula un destino aleatorio dentro de la pantalla
+          const minX = 50;
+          const maxX = this.scale.width - 50;
+          const targetX = Phaser.Math.Between(minX, maxX);
+      
+          // Duración aleatoria para que a veces sea rápido y a veces lento
+          const duration = Phaser.Math.Between(3800, 4500);
+      
+          this.tweens.add({
+            targets: fire,
+            x: targetX,
+            duration,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+            onYoyo: () => fire.setFlipX(true),   // gira para mirar al volver
+            onRepeat: () => fire.setFlipX(false) // gira para mirar al avanzar
+          });
+      
+          this.physics.add.collider(fire, this.platforms);
+          this.physics.add.overlap(this.mario, fire, this.hitByFire, null, this);
+        });
+      }
+      
+
+        // ← NUEVO: lógica de daño por fire
+        hitByFire(mario, fire) {
+            mario.setTint(0xff0000);
+            this.time.delayedCall(300, () => mario.clearTint());
+            this.lives--;
+            if (this.lives <= 0) {
+                this.scene.start('GameOver');
+            }
+        }
+    
 
     // Función para generar escaleras
     generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder', scale = 1) {
@@ -331,6 +410,10 @@ export class Game extends Phaser.Scene {
             this.scene.start('Game1');
         });
     }
+    handlePlatformCollision(mario, platform) {
+        // Aquí solo reaccionas a la colisión superior.
+        // Si quieres, puedes quitar este método y manejar todo desde el processCallback.
+    }
 
     update() {
         // --- Detección de escalera: se activa si se presionan ↑ o ↓ y existe overlap ---
@@ -373,7 +456,7 @@ export class Game extends Phaser.Scene {
 
         // Salto normal (solo si no está en escalera)
         if (this.cursors.up.isDown && this.mario.body.onFloor() && !this.onStairs) {
-            this.mario.setVelocityY(-330);
+            this.mario.setVelocityY(-290);
             this.mario.anims.play('jump', true);
             this.isFloating = true;
             this.mario.body.setGravityY(100);
@@ -452,7 +535,7 @@ export class Game extends Phaser.Scene {
                 // this.input.keyboard.enabled = false;
 
                 // Esperar 3 s y lanzar la siguiente escena
-                this.time.delayedCall(3000, () => {
+                this.time.delayedCall(8000, () => {
                     this.scene.start('Game1');
                 });
             }
@@ -461,7 +544,7 @@ export class Game extends Phaser.Scene {
             this.mario.x, this.mario.y,
             this.pauline.x, this.pauline.y
         );
-        if (dist < 50) {
+        if (dist < 100) {
             this.triggerRescue();
             return;
         }

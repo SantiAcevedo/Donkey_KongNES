@@ -15,6 +15,7 @@ export class Preloader extends Phaser.Scene {
         this.load.image('player2','/assets/menu_2player_button.png');
         this.load.image('ladder','/assets/stairs.png');
         this.load.image('hammer','/assets/hammer.png');
+
     //SPRITESHEETS
 
         // Cargar el spritesheet de Mario
@@ -43,6 +44,11 @@ export class Preloader extends Phaser.Scene {
         this.load.spritesheet('barrel', '/assets/barrel.png', {
             frameWidth: 15, // Ancho de cada frame
             frameHeight: 10 // Alto de cada frame
+        });
+
+        this.load.spritesheet('fire', 'public/assets/fire_ball.png', {
+            frameWidth: 16, // Ancho de cada frame
+            frameHeight: 16 // Alto de cada frame
         });
 
     //AUDIO
