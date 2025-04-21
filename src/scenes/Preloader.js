@@ -32,7 +32,7 @@ export class Preloader extends Phaser.Scene {
         });
 
         //Cargar spritesheet de Pauline
-        this.load.spritesheet('pauline', 'public/assets/pauline.png', {
+        this.load.spritesheet('pauline', '/assets/pauline.png', {
             frameWidth: 15, // Ancho de cada frame
             frameHeight: 22 // Alto de cada frame
         });
