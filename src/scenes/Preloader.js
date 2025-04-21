@@ -47,7 +47,7 @@ export class Preloader extends Phaser.Scene {
             frameHeight: 10 // Alto de cada frame
         });
 
-        this.load.spritesheet('fire', 'public/assets/fire_ball.png', {
+        this.load.spritesheet('fire', '/assets/fire_ball.png', {
             frameWidth: 16, // Ancho de cada frame
             frameHeight: 16 // Alto de cada frame
         });
