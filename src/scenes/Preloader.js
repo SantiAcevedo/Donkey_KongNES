@@ -15,13 +15,14 @@ export class Preloader extends Phaser.Scene {
         this.load.image('player2','/assets/menu_2player_button.png');
         this.load.image('ladder','/assets/stairs.png');
         this.load.image('hammer','/assets/hammer.png');
+        this.load.image('platbarrel','/assets/barrels.png');
 
     //SPRITESHEETS
 
         // Cargar el spritesheet de Mario
-        this.load.spritesheet('mario', '/assets/jumpman.png', {
+        this.load.spritesheet('mario', '/assets/MarioN.png', {
             frameWidth: 36, // Ancho de cada frame
-            frameHeight: 34 // Alto de cada frame
+            frameHeight: 30 // Alto de cada frame
         });
 
         //cargar spritesheet de donkey kong

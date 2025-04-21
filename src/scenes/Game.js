@@ -9,7 +9,8 @@ export class Game extends Phaser.Scene {
         this.floatTimer = null;
         this.isClimbing = false; // Flag para controlar animación de escalada
         this.firstBarrelThrown = false; // Para diferenciar el primer barril
-        this.marioFoundPauline = false;  // ← NUEVO: flag para detectar proximidad
+        this.marioFoundPauline = false;  // flag para detectar proximidad
+        this.skipJumpAnim = false;    // flag para saltar sin animación
     }
 
     create() {
@@ -71,16 +72,18 @@ export class Game extends Phaser.Scene {
             escalon.setScale(0.7).refreshBody();
         }
 
-        this.platforms.create(135, 207, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(131, 207, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(320, 145, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(410, 125, 'floorbricks').setScale(0.7).refreshBody();
         this.platforms.create(498, 125, 'floorbricks').setScale(0.7).refreshBody();
+        this.platforms.create(86, 207, 'floorbricks').setScale(0.7).refreshBody();
+        
 
         // Configuración de la puntuación
         this.scoreText = this.add.text(800, 20, 'Score: 0', { fontSize: '32px', fill: '#fff' });
 
         // Crear Mario con físicas
-        this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.8);
+        this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.9);
         this.mario.setBounce(0.1);
         this.mario.setCollideWorldBounds(true);
         this.mario.body.setGravityY(300);
@@ -116,7 +119,7 @@ export class Game extends Phaser.Scene {
         });
         this.anims.create({
             key: 'jump',
-            frames: [{ key: 'mario', frame: 5 }],
+            frames: [{ key: 'mario', frame: 11 }],
             frameRate: 2
         });
         this.anims.create({
@@ -153,7 +156,7 @@ export class Game extends Phaser.Scene {
         this.mario.play('idle');
 
         // Crear a Donkey Kong
-        this.dk = this.physics.add.sprite(200, 150, 'dk').setScale(2.9);
+        this.dk = this.physics.add.sprite(200, 150, 'dk').setScale(3);
         this.dk.setBounce(0.1);
         this.dk.setCollideWorldBounds(true);
         this.physics.add.collider(this.dk, this.platforms);
@@ -165,8 +168,13 @@ export class Game extends Phaser.Scene {
         });
         this.dk.play('dk_idle');
 
+        // Aquí insertamos 'platbarrel' a la misma Y que DK y centrado en X:
+        this.platbarrel = this.add.image(this.dk.x, this.dk.y, 'platbarrel')
+        .setOrigin(2, 0.6)   // puedes ajustar el origen según quieras centrarlo
+        .setScale(3.7);          // o el scale que necesites
+
         // Crear a Pauline
-        this.pauline = this.physics.add.sprite(320, 100, 'pauline').setScale(2);
+        this.pauline = this.physics.add.sprite(320, 100, 'pauline').setScale(2.3);
         this.pauline.setBounce(0.1);
         this.pauline.setCollideWorldBounds(true);
         this.physics.add.collider(this.pauline, this.platforms);
@@ -180,7 +188,7 @@ export class Game extends Phaser.Scene {
         this.marioFoundPauline = false;  // ← NUEVO
 
         // Agregar oil: iniciamos en frame 0
-        this.oil = this.physics.add.sprite(180, 720, 'oil').setScale(2.6);
+        this.oil = this.physics.add.sprite(180, 720, 'oil').setScale(2.9);
         this.oil.setFrame(0);
         this.physics.add.collider(this.oil, this.platforms);
         // La animación "oilAnim" se activará al colisionar con el primer barril
@@ -193,16 +201,16 @@ export class Game extends Phaser.Scene {
         this.generateLadder(450, 648, 6, 16, "ladder", 4);
         this.generateLadder(350, 545, 7, 16, "ladder", 4);    // tercera plataforma
         this.generateLadder(500, 535, 6, 16, "ladder", 4);
-        this.generateLadder(1640, 530, 9, 16, "ladder", 4);
+        this.generateLadder(860, 530, 5, 16, "ladder", 4);
         this.generateLadder(390, 425, 5, 16, "ladder", 4);    // cuarta plataforma
         this.generateLadder(245, 414, 4, 16, "ladder", 4);
-        this.generateLadder(7160, 450, 4, 16, "ladder", 4);
+        this.generateLadder(820, 410, 5, 16, "ladder", 4);
         this.generateLadder(450, 258, 3, 16, "ladder", 4);    // quinta plataforma
         this.generateLadder(450, 340, 3, 16, "ladder", 4);
         this.generateLadder(630, 310, 5, 16, "ladder", 4);
         this.generateLadder(525, 185, 5, 16, "ladder", 4);    // última plataforma
-        this.generateLadder(380, 190, 9, 16, "ladder", 4);    // plataforma pauline
-        this.generateLadder(320, 190, 9, 16, "ladder", 4);    // plataforma pauline
+        this.generateLadder(350, 180, 9, 16, "ladder", 4);    // plataforma pauline
+        this.generateLadder(290, 180, 9, 16, "ladder", 4);    // plataforma pauline
 
         // Ajustar profundidad de escaleras para que Mario se muestre sobre ellas
         this.stairs.children.iterate((ladder) => {
@@ -215,10 +223,12 @@ export class Game extends Phaser.Scene {
         this.physics.add.overlap(this.mario, this.stairs, (mario, ladder) => {
             if (Math.abs(mario.x - ladder.x) < 10) {
                 this.onStairs = true;
+                this.skipJumpAnim = true; 
             }
         }, null, this);
 
         // Crear grupo de barriles
+        this.firstBarrelThrown = false;
         this.barrels = this.physics.add.group();
         this.anims.create({
             key: 'barrelRoll',
@@ -234,7 +244,7 @@ export class Game extends Phaser.Scene {
         });
         
         this.physics.add.collider(this.mario, this.barrels, this.hitByBarrel, null, this);
-        this.barrelHeights = [675, 570, 460, 360, 260];
+        this.barrelHeights = [665, 570, 460, 365, 271];
         this.time.addEvent({
             delay: 3000,
             loop: true,
@@ -292,7 +302,7 @@ export class Game extends Phaser.Scene {
           const targetX = Phaser.Math.Between(minX, maxX);
       
           // Duración aleatoria para que a veces sea rápido y a veces lento
-          const duration = Phaser.Math.Between(3800, 4500);
+          const duration = Phaser.Math.Between(4500, 4500);
       
           this.tweens.add({
             targets: fire,
@@ -334,7 +344,7 @@ export class Game extends Phaser.Scene {
         if (!this.firstBarrelThrown) {
             this.firstBarrelThrown = true;
             barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
-            barrel.setScale(3);
+            barrel.setScale(3.5);
             barrel.setBounce(0.2);
             // Lanzar el primer barril verticalmente con velocidad menor
             barrel.setVelocity(0, 50);
@@ -354,7 +364,7 @@ export class Game extends Phaser.Scene {
             barrel.play('barrelFirstAnim');
         } else {
             barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
-            barrel.setScale(3);
+            barrel.setScale(3.3);
             barrel.setBounce(0.2);
             barrel.setVelocityX(100);
             barrel.setGravityY(300);
@@ -416,48 +426,48 @@ export class Game extends Phaser.Scene {
     }
 
     update() {
-        // --- Detección de escalera: se activa si se presionan ↑ o ↓ y existe overlap ---
+        // 1) Detección de escalera
         this.onStairs = false;
-        this.physics.overlap(this.mario, this.stairs, (mario, ladder) => {
-            if ((this.cursors.up.isDown || this.cursors.down.isDown) && Math.abs(mario.x - ladder.x) < 10) {
+        this.physics.overlap(this.mario, this.stairs, (m, ladder) => {
+            if ((this.cursors.up.isDown || this.cursors.down.isDown) &&
+                Math.abs(m.x - ladder.x) < 10) {
                 this.onStairs = true;
+                this.skipJumpAnim = true;
             }
         }, null, this);
-
-        // Movimiento horizontal (solo si no está en escalera)
-        if (!this.onStairs) {
-            this.mario.setVelocityX(0);
-            if (this.cursors.left.isDown) {
-                this.mario.setVelocityX(-160);
-                if (this.hasHammer) {
-                    this.mario.play('hammerWalk', true);
-                } else {
-                    this.mario.play('walk', true);
-                }
-                this.mario.setFlipX(true);
-            } else if (this.cursors.right.isDown) {
-                this.mario.setVelocityX(160);
-                if (this.hasHammer) {
-                    this.mario.play('hammerWalk', true);
-                } else {
-                    this.mario.play('walk', true);
-                }
-                this.mario.setFlipX(false);
+    
+        // 2) Si está en escalera: sube/baja y anima 'climb', luego salimos
+        if (this.onStairs) {
+            this.mario.body.setAllowGravity(false);
+            if (this.cursors.up.isDown) {
+                this.mario.setVelocityY(-100);
+                this.mario.play('climb', true);
+            } else if (this.cursors.down.isDown) {
+                this.mario.setVelocityY(100);
+                this.mario.play('climb', true);
             } else {
-                if (this.mario.body.onFloor()) {
-                    if (this.hasHammer) {
-                        this.mario.play('hammerIdle', true);
-                    } else {
-                        this.mario.play('idle', true);
-                    }
-                }
+                this.mario.setVelocityY(0);
+                this.mario.play('climb', true);
             }
+            return; 
+        } else {
+            this.mario.body.setAllowGravity(true);
         }
-
-        // Salto normal (solo si no está en escalera)
-        if (this.cursors.up.isDown && this.mario.body.onFloor() && !this.onStairs) {
+    
+        // 3) Movimiento horizontal
+        let vx = 0;
+        if (this.cursors.left.isDown) {
+            vx = -160;
+            this.mario.setFlipX(true);
+        } else if (this.cursors.right.isDown) {
+            vx = 160;
+            this.mario.setFlipX(false);
+        }
+        this.mario.setVelocityX(vx);
+    
+        // 4) Salto
+        if (this.cursors.up.isDown && this.mario.body.onFloor()) {
             this.mario.setVelocityY(-290);
-            this.mario.anims.play('jump', true);
             this.isFloating = true;
             this.mario.body.setGravityY(100);
             if (this.floatTimer) this.floatTimer.remove();
@@ -466,78 +476,42 @@ export class Game extends Phaser.Scene {
                 this.isFloating = false;
             });
         }
-
-        // Movimiento en escaleras: reproducir "climb" solo si se presiona la flecha arriba
-        if (this.onStairs) {
-            this.mario.body.setAllowGravity(false);
-            if (this.cursors.up.isDown && !this.cursors.down.isDown) {
-                this.mario.setVelocityY(-100);
-                this.mario.body.checkCollision.up = false;
-                if (!this.isClimbing) {
-                    this.mario.play('climb', true);
-                    this.isClimbing = true;
-                }
-            } else if (this.cursors.down.isDown) {
-                this.mario.setVelocityY(100);
-                this.mario.body.checkCollision.up = true;
-                if (this.isClimbing) {
-                    this.mario.play('idle', true);
-                    this.isClimbing = false;
-                }
-            } else {
-                this.mario.setVelocityY(0);
-                this.mario.body.checkCollision.up = true;
-            }
-        } else {
-            this.mario.body.setAllowGravity(true);
-            this.mario.body.checkCollision.up = true;
-            this.isClimbing = false;
-        }
-
-        // Lógica de los barriles
+    
+        // 5) Lógica de los barriles (idéntica a tu código)
         this.barrels.children.iterate(barrel => {
-            if (barrel) {
-                // Aplicar cambio de dirección solo a los barriles que NO sean el primero
-                if (!barrel.getData('isFirst')) {
-                    this.barrelHeights.forEach(height => {
-                        if (Math.abs(barrel.y - height) < 5) {
-                            barrel.direction *= -1;
-                            barrel.setVelocityX(100 * barrel.direction);
-                        }
-                    });
-                }
-                if (barrel.scored === undefined) {
-                    barrel.scored = false;
-                }
-                if (
-                    !barrel.scored &&
-                    this.mario.body.velocity.y > 0 &&
-                    barrel.y > this.mario.y &&
-                    Math.abs(this.mario.x - barrel.x) < 50
-                ) {
-                    this.score += 100;
-                    barrel.scored = true;
-                    this.scoreText.setText('Score: ' + this.score);
-                }
+            if (!barrel) return;
+            if (!barrel.getData('isFirst')) {
+                this.barrelHeights.forEach(height => {
+                    if (Math.abs(barrel.y - height) < 5) {
+                        barrel.direction *= -1;
+                        barrel.setVelocityX(100 * barrel.direction);
+                    }
+                });
+            }
+            if (barrel.scored === undefined) barrel.scored = false;
+            if (
+                !barrel.scored &&
+                this.mario.body.velocity.y > 0 &&
+                barrel.y > this.mario.y &&
+                Math.abs(this.mario.x - barrel.x) < 50
+            ) {
+                this.score += 100;
+                barrel.scored = true;
+                this.scoreText.setText('Score: ' + this.score);
             }
         });
-        // ← NUEVO: Detectar proximidad a Pauline
+    
+        // 6) Proximidad a Pauline y triggerRescue (igual que antes)
         if (!this.marioFoundPauline) {
             const distance = Phaser.Math.Distance.Between(
                 this.mario.x, this.mario.y,
                 this.pauline.x, this.pauline.y
             );
-            if (distance < 100) {  // ajustá el umbral a tu gusto
+            if (distance < 100) {
                 this.marioFoundPauline = true;
-                this.physics.pause();      // pausa la física
-                this.mario.anims.pause();  // opcional: pausa animación de Mario
-                // si querés, podés también desactivar entrada:
-                // this.input.keyboard.enabled = false;
-
-                // Esperar 3 s y lanzar la siguiente escena
-                this.time.delayedCall(8000, () => {
-                    this.scene.start('Game1');
-                });
+                this.physics.pause();
+                this.mario.anims.pause();
+                this.time.delayedCall(8000, () => this.scene.start('Game1'));
             }
         }
         const dist = Phaser.Math.Distance.Between(
@@ -548,12 +522,38 @@ export class Game extends Phaser.Scene {
             this.triggerRescue();
             return;
         }
+
+    // 8) Finalmente, UNA SOLA asignación de animación según estado:
+    if (!this.mario.body.onFloor()) {
+        if (this.skipJumpAnim) {
+          // acabo de rebotar, ignoro esta vez la animación de salto
+          this.skipJumpAnim = false;
+        } else {
+          // en el aire de verdad → salto (frame 11)
+          this.mario.play('jump', true);
+        }
+      } else if (vx !== 0) {
+        // en tierra y moviéndose → caminar o hammerWalk
+        if (this.hasHammer) {
+          this.mario.play('hammerWalk', true);
+        } else {
+          this.mario.play('walk', true);
+        }
+      } else {
+        // en tierra y quieto → idle o hammerIdle
+        if (this.hasHammer) {
+          this.mario.play('hammerIdle', true);
+        } else {
+          this.mario.play('idle', true);
+        }
+      }
     }
 
     handlePlatformCollision(mario, platform) {
         if (this.onStairs) return;
         if (mario.body.touching.right) {
             mario.setVelocityY(-150);
+            this.skipJumpAnim = true; 
         }
         if (mario.body.touching.left) {
             mario.setVelocityY(-150);
