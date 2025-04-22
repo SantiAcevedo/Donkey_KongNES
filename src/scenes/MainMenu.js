@@ -24,7 +24,7 @@ export class MainMenu extends Scene
 
         // Al hacer clic, pasar a la escena 'Game'
         playerImage.on('pointerdown', () => {
-            this.scene.start('Game1');
+            this.scene.start('Game');
         });
     }
 }
