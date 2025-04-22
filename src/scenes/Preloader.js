@@ -18,6 +18,7 @@ export class Preloader extends Phaser.Scene {
         this.load.image('ladderG', '/assets/stairs_green.png');
         this.load.image('hammer','/assets/hammer.png');
         this.load.image('platbarrel','/assets/barrels.png');
+        this.load.image('button', '/assets/Ybutton.png');
 
     //SPRITESHEETS
 
