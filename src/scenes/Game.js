@@ -96,15 +96,6 @@ export class Game extends Phaser.Scene {
         this.mario.body.setSize(w, h);
         this.mario.body.setOffset(offsetX, offsetY);
 
-
-
-        // Colisión con plataformas
-        //this.physics.add.collider(this.mario, this.platforms, this.handlePlatformCollision, null, this);
-
-        // Ajustar cuerpo para facilitar el movimiento en escalones
-        //this.mario.body.setSize(this.mario.width * 0.6, this.mario.height * 0.5);
-        //this.mario.body.setOffset(this.mario.width * 0.2, this.mario.height * 0.5);
-
         // Animaciones de Mario
         this.anims.create({
             key: 'idle',
@@ -168,6 +159,28 @@ export class Game extends Phaser.Scene {
         });
         this.dk.play('dk_idle');
 
+        // 1) Define tu animación (sólo frames 4,5,7, como lo vimos antes)
+        this.anims.create({
+            key: 'dk_special',
+            frames: this.anims.generateFrameNumbers('dk', { frames: [4, 5, 7] }),
+            frameRate: 2,
+            repeat: 0
+        });
+        
+        // 2) Programa un evento que la dispare cada 5 segundos (5000 ms)
+        this.time.addEvent({
+            delay: 2700,          
+            callback: () => {
+            this.dk.play('dk_special');
+            },
+            loop: true
+        });
+        
+        // 3) (Opcional) Cuando termine, vuelve al idle
+        this.dk.on('animationcomplete-dk_special', () => {
+            this.dk.play('dk_idle');
+        });
+
         // Aquí insertamos 'platbarrel' a la misma Y que DK y centrado en X:
         this.platbarrel = this.add.image(this.dk.x, this.dk.y, 'platbarrel')
         .setOrigin(2, 0.6)   // puedes ajustar el origen según quieras centrarlo
@@ -226,6 +239,20 @@ export class Game extends Phaser.Scene {
                 this.skipJumpAnim = true; 
             }
         }, null, this);
+            // Ajustar profundidad de escaleras para que Mario se muestre sobre ellas
+            this.stairs.children.iterate((ladder) => {
+                ladder.setDepth(0);
+            });
+            this.mario.setDepth(1);
+    
+            this.onStairs = false;
+            // Detección de escalera por overlap (con alineación ±10px)
+            this.physics.add.overlap(this.mario, this.stairs, (mario, ladder) => {
+                if (Math.abs(mario.x - ladder.x) < 10) {
+                    this.onStairs = true;
+                    this.skipJumpAnim = true; 
+                }
+            }, null, this);
 
         // Crear grupo de barriles
         this.firstBarrelThrown = false;
@@ -244,7 +271,7 @@ export class Game extends Phaser.Scene {
         });
         
         this.physics.add.collider(this.mario, this.barrels, this.hitByBarrel, null, this);
-        this.barrelHeights = [665, 570, 460, 365, 271];
+        this.barrelHeights = [667, 570, 460, 365, 271];
         this.time.addEvent({
             delay: 3000,
             loop: true,
@@ -267,15 +294,11 @@ export class Game extends Phaser.Scene {
             this.platforms,
             this.handlePlatformCollision,
             (mario, platform) => {
-              // sólo cuando viene cayendo (velocity.y > 0)
-              // y el pie de Mario está justo encima:
               return mario.body.velocity.y > 0 &&
                      (mario.body.bottom <= platform.body.top + 5);
             },
             this
-          );
-                 
-
+          );        
         // ← NUEVO: animación de Fire (frames 0 y 1)
         this.anims.create({
             key: 'fireAnim',
@@ -331,14 +354,12 @@ export class Game extends Phaser.Scene {
             }
         }
     
-
     // Función para generar escaleras
     generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder', scale = 1) {
         for (let i = 0; i < numSteps; i++) {
             this.stairs.create(x, y - i * stepSpacing, key).setScale(scale).refreshBody();
         }
     }
-
     throwBarrel() {
         let barrel;
         if (!this.firstBarrelThrown) {
@@ -359,8 +380,7 @@ export class Game extends Phaser.Scene {
                     barrel.destroy();
                 });
             }, null, this);
-
-            // Reproducir la animación especial para el primer barril (usa tus nuevos frames)
+        // Reproducir la animación especial para el primer barril (usa tus nuevos frames)
             barrel.play('barrelFirstAnim');
         } else {
             barrel = this.barrels.create(this.dk.x, this.dk.y + 20, 'barrel');
@@ -489,17 +509,39 @@ export class Game extends Phaser.Scene {
                 });
             }
             if (barrel.scored === undefined) barrel.scored = false;
+
+           // Dentro de this.barrels.children.iterate(barrel => { … })
             if (
                 !barrel.scored &&
                 this.mario.body.velocity.y > 0 &&
                 barrel.y > this.mario.y &&
-                Math.abs(this.mario.x - barrel.x) < 50
-            ) {
+                Math.abs(this.mario.x - barrel.x) < 50)
+            {
+                // 1) Suma la puntuación
                 this.score += 100;
-                barrel.scored = true;
                 this.scoreText.setText('Score: ' + this.score);
+                barrel.scored = true;
+
+                // 2) Crea el texto +100 en la posición del barril
+                const pts = this.add.text(barrel.x, barrel.y, '100', {
+                    font: '36px Arial',
+                    fill: '#ffffff',
+                    stroke: '#000000',
+                    strokeThickness: 5
+                }).setOrigin(0.5);
+
+                // 3) Tween para subirlo  y hacerlo desaparecer
+                this.tweens.add({
+                    targets: pts,
+                    y: pts.y - 50,    // sube 50px
+                    alpha: 0,         // se va difuminando
+                    duration: 800,
+                    ease: 'Power1',
+                    onComplete: () => pts.destroy()
+                });
             }
         });
+
     
         // 6) Proximidad a Pauline y triggerRescue (igual que antes)
         if (!this.marioFoundPauline) {

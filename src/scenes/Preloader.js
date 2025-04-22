@@ -10,10 +10,12 @@ export class Preloader extends Phaser.Scene {
     //IMAGENES
 
         this.load.image('floorbricks', '/assets/vigas.png');
+        this.load.image('viga', '/assets/viga2.png');
         this.load.image('menu','/assets/menu_background.png');
         this.load.image('player','/assets/menu_1player_button.png');
         this.load.image('player2','/assets/menu_2player_button.png');
         this.load.image('ladder','/assets/stairs.png');
+        this.load.image('ladderG', '/assets/stairs_green.png');
         this.load.image('hammer','/assets/hammer.png');
         this.load.image('platbarrel','/assets/barrels.png');
 
