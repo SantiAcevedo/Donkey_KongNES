@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { InputManager } from '../components/InputManager';
 
 export class Game1 extends Phaser.Scene {
   constructor() {
@@ -14,6 +15,8 @@ export class Game1 extends Phaser.Scene {
     }
 
   create() {
+    this.inputManager = new InputManager(this);
+    this.inputManager.setup();
     // — Fondo & Score —
     this.cameras.main.setBackgroundColor('#00000a');
     this.scoreText = this.add.text(120, 40, 'I- 0', {
@@ -209,47 +212,66 @@ this.anims.create({
   }
 
   update() {
+    // 0) Actualizar gamepad
+    this.inputManager.update();
+    const padMove = this.inputManager.getMovement();
+    const padJump = this.inputManager.isJumping();
+  
+    // 1) Estado de suelo y variable de velocidad
     const onFloor = this.mario.body.onFloor();
-    // — Chequeo escalera primero —
+    let vx = 0;
+  
+    // 2) Detección de escalera (tecla o stick vertical)
     this.onStairs = false;
-    this.physics.overlap(this.mario, this.stairs, (m,ladder)=>{
-      if ((this.cursors.up.isDown||this.cursors.down.isDown)
-          && Math.abs(m.x - ladder.x) < 10) {
+    this.physics.overlap(this.mario, this.stairs, (m, ladder) => {
+      const upPressed   = this.cursors.up.isDown   || padMove.y < -0.5;
+      const downPressed = this.cursors.down.isDown || padMove.y >  0.5;
+      if ((upPressed || downPressed) && Math.abs(m.x - ladder.x) < 10) {
         this.onStairs = true;
       }
     }, null, this);
-
+  
     if (this.onStairs) {
       this.mario.body.setAllowGravity(false);
-      if (this.cursors.up.isDown)      this.mario.setVelocityY(-100).play('climb',true);
-      else if (this.cursors.down.isDown) this.mario.setVelocityY(100).play('climb',true);
-      else                               this.mario.setVelocityY(0).play('climb',true);
+      if (this.cursors.up.isDown   || padMove.y < -0.5) this.mario.setVelocityY(-100).play('climb', true);
+      else if (this.cursors.down.isDown || padMove.y > 0.5) this.mario.setVelocityY(100).play('climb', true);
+      else this.mario.setVelocityY(0).play('climb', true);
       return;
     } else {
       this.mario.body.setAllowGravity(true);
     }
-
-     // — Movimiento horizontal & salto —
-    let vx = 0;
-    if (this.cursors.left.isDown)      { vx = -160; this.mario.setFlipX(true); }
-    else if (this.cursors.right.isDown){ vx =  160; this.mario.setFlipX(false); }
+  
+    // 3) Movimiento horizontal (tecla o stick)
+    if (this.cursors.left.isDown  || padMove.x < -0.1) {
+      vx = -160;
+      this.mario.setFlipX(true);
+    } else if (this.cursors.right.isDown || padMove.x > 0.1) {
+      vx = 160;
+      this.mario.setFlipX(false);
+    }
     this.mario.setVelocityX(vx);
-    if (this.cursors.up.isDown && onFloor) {
+  
+    // 4) Salto (tecla ↑ o push stick hacia arriba)
+    if ((this.cursors.up.isDown || padJump) && onFloor) {
       this.mario.setVelocityY(-290);
     }
-
-    // — Animaciones suelo vs aire, incluyendo martillo —
+  
+    // 5) Animaciones suelo vs aire, incluyendo martillo
     if (!onFloor) {
-      if (!this.skipJumpAnim) this.mario.play('jump', true);
-      else                    this.skipJumpAnim = false;
+      if (!this.skipJumpAnim) {
+        this.mario.play('jump', true);
+      } else {
+        this.skipJumpAnim = false;
+      }
     } else if (vx !== 0) {
       if (this.hasHammer) this.mario.play('hammerWalk', true);
-      else                this.mario.play('walk', true);
+      else                this.mario.play('walk',       true);
     } else {
       if (this.hasHammer) this.mario.play('hammerIdle', true);
-      else                this.mario.play('idle', true);
+      else                this.mario.play('idle',       true);
     }
   }
+  
 
   // — Recoger martillo: dura 5 s y activa animación de martillo —
   pickUpHammer(mario, hammer) {

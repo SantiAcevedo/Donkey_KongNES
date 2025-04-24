@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { InputManager } from '../components/InputManager';
 
 export class Game extends Phaser.Scene {
     constructor() {
@@ -14,6 +15,9 @@ export class Game extends Phaser.Scene {
     }
 
     create() {
+        this.inputManager = new InputManager(this);
+        this.inputManager.setup();
+
         // Fondo y piso
         this.cameras.main.setBackgroundColor('#00000a');
 
@@ -472,150 +476,149 @@ export class Game extends Phaser.Scene {
     }
 
     update() {
-        // 1) Detección de escalera
+        // 1) Actualizar gamepad
+        this.inputManager.update();
+        const padMove = this.inputManager.getMovement();
+        const padJump = this.inputManager.isJumping();
+      
+        // 2) Declarar vx al inicio para que tenga alcance en todo el método
+        let vx = 0;
+      
+        // 3) Detección de escalera
         this.onStairs = false;
         this.physics.overlap(this.mario, this.stairs, (m, ladder) => {
-            if ((this.cursors.up.isDown || this.cursors.down.isDown) &&
-                Math.abs(m.x - ladder.x) < 10) {
-                this.onStairs = true;
-                this.skipJumpAnim = true;
-            }
+          const upPressed   = this.cursors.up.isDown   || padMove.y < -0.5;
+          const downPressed = this.cursors.down.isDown || padMove.y >  0.5;
+          if ((upPressed || downPressed) && Math.abs(m.x - ladder.x) < 10) {
+            this.onStairs = true;
+            this.skipJumpAnim = true;
+          }
         }, null, this);
-    
-        // 2) Si está en escalera: sube/baja y anima 'climb', luego salimos
+      
         if (this.onStairs) {
-            this.mario.body.setAllowGravity(false);
-            if (this.cursors.up.isDown) {
-                this.mario.setVelocityY(-100);
-                this.mario.play('climb', true);
-            } else if (this.cursors.down.isDown) {
-                this.mario.setVelocityY(100);
-                this.mario.play('climb', true);
-            } else {
-                this.mario.setVelocityY(0);
-                this.mario.play('climb', true);
-            }
-            return; 
+          this.mario.body.setAllowGravity(false);
+          if (this.cursors.up.isDown || padMove.y < -0.5) {
+            this.mario.setVelocityY(-100);
+          } else if (this.cursors.down.isDown || padMove.y > 0.5) {
+            this.mario.setVelocityY(100);
+          } else {
+            this.mario.setVelocityY(0);
+          }
+          this.mario.play('climb', true);
+          return;
         } else {
-            this.mario.body.setAllowGravity(true);
+          this.mario.body.setAllowGravity(true);
         }
-    
-        // 3) Movimiento horizontal
-        let vx = 0;
-        if (this.cursors.left.isDown) {
-            vx = -160;
-            this.mario.setFlipX(true);
-        } else if (this.cursors.right.isDown) {
-            vx = 160;
-            this.mario.setFlipX(false);
+      
+        // 4) Movimiento horizontal (teclado o stick)
+        if (this.cursors.left.isDown  || padMove.x < -0.1) {
+          vx = -160;
+          this.mario.setFlipX(true);
+        } else if (this.cursors.right.isDown || padMove.x > 0.1) {
+          vx = 160;
+          this.mario.setFlipX(false);
         }
         this.mario.setVelocityX(vx);
-    
-        // 4) Salto
-        if (this.cursors.up.isDown && this.mario.body.onFloor()) {
-            this.mario.setVelocityY(-290);
-            this.isFloating = true;
-            this.mario.body.setGravityY(100);
-            if (this.floatTimer) this.floatTimer.remove();
-            this.floatTimer = this.time.delayedCall(1000, () => {
-                this.mario.body.setGravityY(300);
-                this.isFloating = false;
-            });
+      
+        // 5) Salto (tecla ↑ o push stick hacia arriba)
+        const jumpPressed = (this.cursors.up.isDown || padJump) && this.mario.body.onFloor();
+        if (jumpPressed) {
+          this.mario.setVelocityY(-290);
+          this.isFloating = true;
+          this.mario.body.setGravityY(100);
+          if (this.floatTimer) this.floatTimer.remove();
+          this.floatTimer = this.time.delayedCall(1000, () => {
+            this.mario.body.setGravityY(300);
+            this.isFloating = false;
+          });
         }
-    
-        // 5) Lógica de los barriles (idéntica a tu código)
+      
+        // 6) Lógica de barriles
         this.barrels.children.iterate(barrel => {
-            if (!barrel) return;
-            if (!barrel.getData('isFirst')) {
-                this.barrelHeights.forEach(height => {
-                    if (Math.abs(barrel.y - height) < 5) {
-                        barrel.direction *= -1;
-                        barrel.setVelocityX(100 * barrel.direction);
-                    }
-                });
-            }
-            if (barrel.scored === undefined) barrel.scored = false;
-
-           // Dentro de this.barrels.children.iterate(barrel => { … })
-            if (
-                !barrel.scored &&
-                this.mario.body.velocity.y > 0 &&
-                barrel.y > this.mario.y &&
-                Math.abs(this.mario.x - barrel.x) < 50)
-            {
-                // 1) Suma la puntuación
-                this.score += 100;
-                this.scoreText.setText('I- ' + this.score);
-                barrel.scored = true;
-
-                // 2) Crea el texto +100 en la posición del barril
-                const pts = this.add.text(barrel.x, barrel.y, '100', {
-                    font: '34px Arial',
-                    fill: '#ffffff',
-                    stroke: '#000000',
-                    strokeThickness: 5
-                }).setOrigin(0.5);
-
-                // 3) Tween para subirlo  y hacerlo desaparecer
-                this.tweens.add({
-                    targets: pts,
-                    y: pts.y - 50,    // sube 50px
-                    alpha: 0,         // se va difuminando
-                    duration: 800,
-                    ease: 'Power1',
-                    onComplete: () => pts.destroy()
-                });
-            }
+          if (!barrel) return;
+          if (!barrel.getData('isFirst')) {
+            this.barrelHeights.forEach(height => {
+              if (Math.abs(barrel.y - height) < 5) {
+                barrel.direction *= -1;
+                barrel.setVelocityX(100 * barrel.direction);
+              }
+            });
+          }
+          if (barrel.scored === undefined) barrel.scored = false;
+      
+          // Puntuación al caer encima
+          if (
+            !barrel.scored &&
+            this.mario.body.velocity.y > 0 &&
+            barrel.y > this.mario.y &&
+            Math.abs(this.mario.x - barrel.x) < 50
+          ) {
+            this.score += 100;
+            this.scoreText.setText('I- ' + this.score);
+            barrel.scored = true;
+      
+            const pts = this.add.text(barrel.x, barrel.y, '100', {
+              font: '34px Arial',
+              fill: '#ffffff',
+              stroke: '#000000',
+              strokeThickness: 5
+            }).setOrigin(0.5);
+      
+            this.tweens.add({
+              targets: pts,
+              y:    pts.y - 50,
+              alpha:0,
+              duration: 800,
+              ease: 'Power1',
+              onComplete: () => pts.destroy()
+            });
+          }
         });
-
-    
-        // 6) Proximidad a Pauline y triggerRescue (igual que antes)
+      
+        // 7) Proximidad a Pauline y rescate
         if (!this.marioFoundPauline) {
-            const distance = Phaser.Math.Distance.Between(
-                this.mario.x, this.mario.y,
-                this.pauline.x, this.pauline.y
-            );
-            if (distance < 100) {
-                this.marioFoundPauline = true;
-                this.physics.pause();
-                this.mario.anims.pause();
-                this.time.delayedCall(8000, () => this.scene.start('Game1'));
-            }
-        }
-        const dist = Phaser.Math.Distance.Between(
+          const distance = Phaser.Math.Distance.Between(
             this.mario.x, this.mario.y,
             this.pauline.x, this.pauline.y
+          );
+          if (distance < 100) {
+            this.marioFoundPauline = true;
+            this.physics.pause();
+            this.mario.anims.pause();
+            this.time.delayedCall(8000, () => this.scene.start('Game1'));
+          }
+        }
+        const dist = Phaser.Math.Distance.Between(
+          this.mario.x, this.mario.y,
+          this.pauline.x, this.pauline.y
         );
         if (dist < 100) {
-            this.triggerRescue();
-            return;
+          this.triggerRescue();
+          return;
         }
-
-    // 8) Finalmente, UNA SOLA asignación de animación según estado:
-    if (!this.mario.body.onFloor()) {
-        if (this.skipJumpAnim) {
-          // acabo de rebotar, ignoro esta vez la animación de salto
-          this.skipJumpAnim = false;
+      
+        // 8) Asignación de animación final según estado
+        if (!this.mario.body.onFloor()) {
+          if (this.skipJumpAnim) {
+            this.skipJumpAnim = false;
+          } else {
+            this.mario.play('jump', true);
+          }
+        } else if (vx !== 0) {
+          if (this.hasHammer) {
+            this.mario.play('hammerWalk', true);
+          } else {
+            this.mario.play('walk', true);
+          }
         } else {
-          // en el aire de verdad → salto (frame 11)
-          this.mario.play('jump', true);
-        }
-      } else if (vx !== 0) {
-        // en tierra y moviéndose → caminar o hammerWalk
-        if (this.hasHammer) {
-          this.mario.play('hammerWalk', true);
-        } else {
-          this.mario.play('walk', true);
-        }
-      } else {
-        // en tierra y quieto → idle o hammerIdle
-        if (this.hasHammer) {
-          this.mario.play('hammerIdle', true);
-        } else {
-          this.mario.play('idle', true);
+          if (this.hasHammer) {
+            this.mario.play('hammerIdle', true);
+          } else {
+            this.mario.play('idle', true);
+          }
         }
       }
-    }
+      
 
     handlePlatformCollision(mario, platform) {
         // si toca escalera, no rebotar ni empujar arriba/abajo
