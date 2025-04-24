@@ -5,6 +5,8 @@ import { MainMenu } from './scenes/MainMenu';
 import { Game } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
 import { Game1 } from './scenes/Game1';
+import {Game1F} from './scenes/Game1F';
+import {FinalScore} from './scenes/FinalScore'; 
 
 const config = {
     type: Phaser.AUTO,
@@ -29,6 +31,8 @@ const config = {
         MainMenu,
         Game, // Asegúrate de que Game esté aquí
         Game1,
+        Game1F,
+        FinalScore,
         GameOver
     ]
 };

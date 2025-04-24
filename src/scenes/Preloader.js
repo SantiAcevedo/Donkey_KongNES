@@ -19,6 +19,9 @@ export class Preloader extends Phaser.Scene {
         this.load.image('hammer','/assets/hammer.png');
         this.load.image('platbarrel','/assets/barrels.png');
         this.load.image('button', '/assets/Ybutton.png');
+        this.load.image('umbrella', '/assets/umbrella.png');
+        this.load.image('bag', '/assets/bag.png');
+        this.load.image('heart', '/assets/heart.png');
 
     //SPRITESHEETS
 
@@ -54,6 +57,13 @@ export class Preloader extends Phaser.Scene {
             frameWidth: 16, // Ancho de cada frame
             frameHeight: 16 // Alto de cada frame
         });
+
+        this.load.spritesheet('flames', '/assets/flames.png', {
+            frameWidth: 16, // Ancho de cada frame
+            frameHeight: 14 // Alto de cada frame
+        });
+
+
 
     //AUDIO
     }

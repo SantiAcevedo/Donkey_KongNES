@@ -48,7 +48,7 @@ export class Game extends Phaser.Scene {
         let startX2 = 845;
         let startY2 = 470;
         let stepX2 = -90;
-        let stepY2 = -3;
+        let stepY2 = -2;
         for (let i = 0; i < 9; i++) {
             let escalon = this.platforms.create(startX2 + (i * stepX2), startY2 + (i * stepY2), 'floorbricks');
             escalon.setScale(0.7).refreshBody();
@@ -80,7 +80,7 @@ export class Game extends Phaser.Scene {
         
 
         // Configuración de la puntuación
-        this.scoreText = this.add.text(800, 20, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+        this.scoreText = this.add.text(120, 40, 'I- 0', { fontSize: '38px', fill: '#fff' });
 
         // Crear Mario con físicas
         this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.9);
@@ -289,16 +289,19 @@ export class Game extends Phaser.Scene {
         this.hasHammer = false;
         this.physics.add.overlap(this.mario, this.hammers, this.pickUpHammer, null, this);
 
+        // 1) Colisión Mario ⇆ plataformas: solo choca si baja y está justo encima
         this.physics.add.collider(
             this.mario,
             this.platforms,
             this.handlePlatformCollision,
             (mario, platform) => {
-              return mario.body.velocity.y > 0 &&
-                     (mario.body.bottom <= platform.body.top + 5);
+            return mario.body.velocity.y > 0 &&
+                    mario.body.bottom <= platform.body.top + 5;
             },
             this
-          );        
+        );
+  
+
         // ← NUEVO: animación de Fire (frames 0 y 1)
         this.anims.create({
             key: 'fireAnim',
@@ -397,20 +400,43 @@ export class Game extends Phaser.Scene {
 
     hitByBarrel(mario, barrel) {
         if (this.hasHammer) {
+            // Rompes el barril
             barrel.destroy();
-            this.score += 100;
-            this.scoreText.setText('Score: ' + this.score);
+    
+            // +500 puntos
+            this.score += 500;
+            this.scoreText.setText('I- ' + this.score);
+    
+            // Texto flotante “+500”
+            const pts = this.add.text(barrel.x, barrel.y, '500', {
+                font: '34px Arial',
+                fill: '#ffff00',
+                stroke: '#000',
+                strokeThickness: 3
+            }).setOrigin(0.5);
+    
+            this.tweens.add({
+                targets: pts,
+                y:    pts.y - 50,
+                alpha:0,
+                duration: 800,
+                ease: 'Power1',
+                onComplete: () => pts.destroy()
+            });
+    
             return;
         }
+    
+        // Si no tienes martillo, golpe normal...
         this.lives -= 1;
-        console.log(`Vidas restantes: ${this.lives}`);
         if (this.lives <= 0) {
             this.scene.start('GameOver');
         } else {
-            this.mario.setX(250);
-            this.mario.setY(710);
+            // Reinicio de posición, etc.
+            this.mario.setPosition(250, 710);
         }
     }
+    
 
     pickUpHammer(mario, hammer) {
         hammer.disableBody(true, true);
@@ -437,7 +463,7 @@ export class Game extends Phaser.Scene {
 
         // Tras 3 segundos, cambiar de escena
         this.time.delayedCall(3000, () => {
-            this.scene.start('Game1');
+            this.scene.start('Game1', { prevScore: this.score });
         });
     }
     handlePlatformCollision(mario, platform) {
@@ -519,12 +545,12 @@ export class Game extends Phaser.Scene {
             {
                 // 1) Suma la puntuación
                 this.score += 100;
-                this.scoreText.setText('Score: ' + this.score);
+                this.scoreText.setText('I- ' + this.score);
                 barrel.scored = true;
 
                 // 2) Crea el texto +100 en la posición del barril
                 const pts = this.add.text(barrel.x, barrel.y, '100', {
-                    font: '36px Arial',
+                    font: '34px Arial',
                     fill: '#ffffff',
                     stroke: '#000000',
                     strokeThickness: 5
@@ -592,13 +618,16 @@ export class Game extends Phaser.Scene {
     }
 
     handlePlatformCollision(mario, platform) {
-        if (this.onStairs) return;
-        if (mario.body.touching.right) {
-            mario.setVelocityY(-150);
-            this.skipJumpAnim = true; 
+        // si toca escalera, no rebotar ni empujar arriba/abajo
+        if (this.physics.overlap(mario, this.stairs)) {
+        return;
         }
-        if (mario.body.touching.left) {
-            mario.setVelocityY(-150);
+    
+        // rebote lateral normal
+        if (mario.body.touching.left || mario.body.touching.right) {
+        mario.setVelocityY(-150);
+        this.skipJumpAnim = true;
         }
     }
+  
 }
