@@ -138,13 +138,19 @@ export class Game1 extends Phaser.Scene {
 // === FLAMES ===
 
 // 1) Creamos la animación (asegúrate de hacerlo **antes** de spawnear)
-//    — igual que en Game.js, frames 0 y 1 de 'flames'
 this.anims.create({
     key: 'flameAnim',
     frames: this.anims.generateFrameNumbers('flames', { start: 0, end: 1 }),
     frameRate: 6,
     repeat: -1
   });
+  this.anims.create({
+    key: 'flameScared',
+    frames: this.anims.generateFrameNumbers('flames', { start: 2, end: 3 }),
+    frameRate: 6,
+    repeat: -1
+  });
+  
   
   // 2) Grupo de flames y colisiones
   this.flames = this.physics.add.group({ allowGravity: false, immovable: true });
@@ -275,14 +281,26 @@ this.anims.create({
 
   // — Recoger martillo: dura 5 s y activa animación de martillo —
   pickUpHammer(mario, hammer) {
-    hammer.disableBody(true,true);
+    hammer.disableBody(true, true);
     this.hasHammer = true;
     mario.play('hammerIdle', true);
+  
+    // Cambiar animación de todos los flames a flameScared
+    this.flames.children.iterate(f => {
+      if (f && f.anims) f.play('flameScared');
+    });
+  
     this.time.delayedCall(5000, () => {
       this.hasHammer = false;
       mario.play('idle', true);
+  
+      // Volver a la animación normal
+      this.flames.children.iterate(f => {
+        if (f && f.anims) f.play('flameAnim');
+      });
     });
   }
+  
 
   // — Choque con flames respeta martillo —
   hitByFlame(m, flame) {
