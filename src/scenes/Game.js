@@ -12,6 +12,7 @@ export class Game extends Phaser.Scene {
         this.firstBarrelThrown = false; // Para diferenciar el primer barril
         this.marioFoundPauline = false;  // flag para detectar proximidad
         this.skipJumpAnim = false;    // flag para saltar sin animación
+        this.canMove = true;
     }
 
     create() {
@@ -85,6 +86,9 @@ export class Game extends Phaser.Scene {
 
         // Configuración de la puntuación
         this.scoreText = this.add.text(120, 40, 'I- 0', { fontSize: '38px', fill: '#fff' });
+        this.liveText = this.add.text(672, 70, 'M', { fontSize: '38px', fill: '#fff' });
+        this.liveText = this.add.text(648, 82, '( )', { fontSize: '40px', fill: '#fff' });
+        this.livesText = this.add.text(650, 100, ` ${this.lives}`, { fontSize: '38px', fill: '#fff' });
 
         // Crear Mario con físicas
         this.mario = this.physics.add.sprite(250, 710, 'mario').setScale(2.9);
@@ -123,6 +127,13 @@ export class Game extends Phaser.Scene {
             frameRate: 5,
             repeat: -1
         });
+          // NUEVO: animación de muerte de Mario
+          this.anims.create({
+            key: 'mario_death',
+            frames: this.anims.generateFrameNumbers('mario', { frames: [7] }), // ajusta el frame de muerte
+            frameRate: 1,
+            repeat: 0
+        });
 
         // Animación para oil: reproducirá frames 1 y 2 cíclicamente
         this.anims.create({
@@ -151,7 +162,7 @@ export class Game extends Phaser.Scene {
         this.mario.play('idle');
 
         // Crear a Donkey Kong
-        this.dk = this.physics.add.sprite(200, 150, 'dk').setScale(3);
+        this.dk = this.physics.add.sprite(200, 120, 'dk').setScale(3);
         this.dk.setBounce(0.1);
         this.dk.setCollideWorldBounds(true);
         this.physics.add.collider(this.dk, this.platforms);
@@ -187,7 +198,7 @@ export class Game extends Phaser.Scene {
 
         // Aquí insertamos 'platbarrel' a la misma Y que DK y centrado en X:
         this.platbarrel = this.add.image(this.dk.x, this.dk.y, 'platbarrel')
-        .setOrigin(2, 0.6)   // puedes ajustar el origen según quieras centrarlo
+        .setOrigin(2, 0.3)   // puedes ajustar el origen según quieras centrarlo
         .setScale(3.7);          // o el scale que necesites
 
         // Crear a Pauline
@@ -351,15 +362,26 @@ export class Game extends Phaser.Scene {
       }
       
 
-        // ← NUEVO: lógica de daño por fire
-        hitByFire(mario, fire) {
-            mario.setTint(0xff0000);
-            this.time.delayedCall(300, () => mario.clearTint());
-            this.lives--;
-            if (this.lives <= 0) {
-                this.scene.start('GameOver');
-            }
+      hitByFire(mario, fire) {
+        fire.destroy();
+        // NUEVO: misma lógica para fueguitos
+        this.lives--;
+        this.livesText.setText(` ${this.lives}`);
+        if (this.lives <= 0) {
+            return this.scene.start('GameOver');
         }
+        this.canMove = false;
+        this.mario.body.setVelocity(0, 0);
+        this.mario.body.setAllowGravity(false);
+        this.mario.play('mario_death');
+        this.mario.once('animationcomplete-mario_death', () => {
+            this.mario.body.setAllowGravity(true);
+            this.mario.setPosition(250, 710);
+            this.mario.body.setVelocity(0, 0);
+            this.canMove = true;
+            this.mario.play('idle');
+        });
+    }
     
     // Función para generar escaleras
     generateLadder(x, y, numSteps, stepSpacing = 32, key = 'ladder', scale = 1) {
@@ -403,43 +425,36 @@ export class Game extends Phaser.Scene {
     }
 
     hitByBarrel(mario, barrel) {
-        if (this.hasHammer) {
-            // Rompes el barril
-            barrel.destroy();
-    
-            // +500 puntos
-            this.score += 500;
-            this.scoreText.setText('I- ' + this.score);
-    
-            // Texto flotante “+500”
-            const pts = this.add.text(barrel.x, barrel.y, '500', {
-                font: '34px Arial',
-                fill: '#ffff00',
-                stroke: '#000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-    
-            this.tweens.add({
-                targets: pts,
-                y:    pts.y - 50,
-                alpha:0,
-                duration: 800,
-                ease: 'Power1',
-                onComplete: () => pts.destroy()
-            });
-    
-            return;
-        }
-    
-        // Si no tienes martillo, golpe normal...
-        this.lives -= 1;
-        if (this.lives <= 0) {
-            this.scene.start('GameOver');
-        } else {
-            // Reinicio de posición, etc.
-            this.mario.setPosition(250, 710);
-        }
+      const posX = barrel.x;
+      const posY = barrel.y;
+      barrel.destroy();
+
+      if (this.hasHammer) {
+        this.score += 500;
+        this.scoreText.setText(`I- ${this.score}`);
+        return;
     }
+    // NUEVO: reducir vida y actualizar contador
+    this.lives--;
+    this.livesText.setText(` ${this.lives}`);
+
+    if (this.lives <= 0) {
+        return this.scene.start('GameOver');
+    }
+
+    // NUEVO: bloquear movimiento y reproducir muerte
+    this.canMove = false;
+    this.mario.body.setVelocity(0, 0);
+    this.mario.body.setAllowGravity(false);
+    this.mario.play('mario_death');
+    this.mario.once('animationcomplete-mario_death', () => {
+        this.mario.body.setAllowGravity(true);
+        this.mario.setPosition(250, 710);
+        this.mario.body.setVelocity(0, 0);
+        this.canMove = true;
+        this.mario.play('idle');
+    });
+}
     
 
     pickUpHammer(mario, hammer) {
@@ -476,6 +491,11 @@ export class Game extends Phaser.Scene {
     }
 
     update() {
+        // si Mario está en animación de muerte, no responde al input
+        if (!this.canMove) {
+          this.mario.setVelocityX(0);
+          return;
+      }
         // 1) Actualizar gamepad
         this.inputManager.update();
         const padMove = this.inputManager.getMovement();

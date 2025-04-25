@@ -12,6 +12,7 @@ export class Game1 extends Phaser.Scene {
   init(data) {
      // data.prevScore viene de Game.js
      this.prevScore = data.prevScore || 0;
+     this.score = this.prevScore;
     }
 
   create() {
@@ -19,9 +20,12 @@ export class Game1 extends Phaser.Scene {
     this.inputManager.setup();
     // — Fondo & Score —
     this.cameras.main.setBackgroundColor('#00000a');
-    this.scoreText = this.add.text(120, 40, 'I- 0', {
-      fontSize: '38px', fill: '#fff'
-    });
+  // — NUEVO: utilizamos this.score (ya tiene prevScore) —
+  this.scoreText = this.add.text(
+    120, 40,
+    'I- ' + this.score,    // ahora muestra la puntuación acumulada
+    { fontSize: '38px', fill: '#fff' }
+  );
 
     // — Plataformas —
     this.platforms = this.physics.add.staticGroup();
@@ -81,7 +85,7 @@ export class Game1 extends Phaser.Scene {
     this.mario.play('idle');
 
     // — Donkey Kong & Pauline —
-    this.dk = this.physics.add.sprite(500,210,'dk').setScale(3.5);
+    this.dk = this.physics.add.sprite(500,180,'dk').setScale(3.2);
     this.dk.setBounce(0.1).setCollideWorldBounds(true);
     this.physics.add.collider(this.dk, this.platforms);
     this.anims.create({
@@ -280,27 +284,26 @@ this.anims.create({
   
 
   // — Recoger martillo: dura 5 s y activa animación de martillo —
-  pickUpHammer(mario, hammer) {
-    hammer.disableBody(true, true);
-    this.hasHammer = true;
-    mario.play('hammerIdle', true);
-  
-    // Cambiar animación de todos los flames a flameScared
+pickUpHammer(mario, hammer) {
+  hammer.disableBody(true, true);
+  this.hasHammer = true;
+  mario.play('hammerIdle', true);
+
+  // Cambiar animación de todos los flames a flameScared
+  this.flames.children.iterate(f => {
+    if (f && f.anims) f.play('flameScared');
+  });
+
+  this.time.delayedCall(5000, () => {
+    this.hasHammer = false;
+    mario.play('idle', true);
+
+    // Volver a la animación normal
     this.flames.children.iterate(f => {
-      if (f && f.anims) f.play('flameScared');
+      if (f && f.anims) f.play('flameAnim');
     });
-  
-    this.time.delayedCall(5000, () => {
-      this.hasHammer = false;
-      mario.play('idle', true);
-  
-      // Volver a la animación normal
-      this.flames.children.iterate(f => {
-        if (f && f.anims) f.play('flameAnim');
-      });
-    });
-  }
-  
+  });
+}
 
   // — Choque con flames respeta martillo —
   hitByFlame(m, flame) {
@@ -344,8 +347,8 @@ this.anims.create({
       });
       if (this.buttons.countActive(true) === 0) {
         this.time.delayedCall(1000, () => {
-          const total = this.prevScore + this.score;
-          this.scene.start('Game1F', { totalScore: total });
+    // — NUEVO: enviamos totalScore a la siguiente escena —
+    this.scene.start('Game1F', { totalScore: this.score });
           });
       }
     }

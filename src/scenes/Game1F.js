@@ -1,4 +1,3 @@
-// src/scenes/Game1F.js
 import Phaser from 'phaser';
 
 export class Game1F extends Phaser.Scene {
@@ -47,25 +46,63 @@ export class Game1F extends Phaser.Scene {
     );
 
     // — Donkey Kong “colgado” en el aire —
-    this.dk = this.physics.add.sprite(500, 210, 'dk').setScale(3.5);
+    this.dk = this.physics.add.sprite(500, 210, 'dk').setScale(3.2);
     this.dk.body.setAllowGravity(false);
+
+    // Animaciones DK
     this.anims.create({
       key: 'dk_idle',
-      frames: this.anims.generateFrameNumbers('dk', { start: 0, end: 2 }),
+      frames: this.anims.generateFrameNumbers('dk', { start: 1, end: 2 }),
       frameRate: 2,
       repeat: -1
     });
+    this.anims.create({
+      key: 'dk_fall_frame',
+      frames: [{ key: 'dk', frame: 3 }],
+      frameRate: 1,
+      repeat: 0
+    });
+    this.anims.create({
+      key: 'dk_land_frame',
+      frames: [{ key: 'dk', frame: 8 }],
+      frameRate: 1,
+      repeat: 0
+    });
+    this.anims.create({
+      key: 'dk_post_land',
+      frames: this.anims.generateFrameNumbers('dk', { start: 8, end: 9 }),
+      frameRate: 4,
+      repeat: -1
+    });
+
     this.dk.play('dk_idle');
+    this.dkHasLanded = false;
 
-    // — Tras 2 s, DK cae y colisiona; después 1.5 s aparece la nueva plataforma + personajes —
+    // — Tras 2 s, DK “cae” y jugamos la animación de caída —
     this.time.delayedCall(2000, () => {
-      // Dejar caer a DK
       this.dk.body.setAllowGravity(true);
-      this.physics.add.collider(this.dk, this.platforms);
+      this.dk.play('dk_fall_frame');
 
-      // 1.5 s después generamos la nueva plataforma **y** las imágenes
+      // Collider para detectar el aterrizaje
+      this.physics.add.collider(
+        this.dk, this.platforms,
+        () => {
+          if (this.dkHasLanded) return;
+          this.dkHasLanded = true;
+
+          // 0.5 s con frame 8
+          this.dk.play('dk_land_frame');
+          this.time.delayedCall(500, () => {
+            // luego animación 8→9
+            this.dk.play('dk_post_land');
+          });
+        },
+        null,
+        this
+      );
+
+      // 1.5 s después generamos la nueva plataforma y personajes
       this.time.delayedCall(1500, () => {
-        // 1) Plataforma idéntica a la de y=680 pero a y=280
         for (let i = 0; i < 6; i++) {
           this.platforms
             .create(764 - i * 100, 280, 'viga')
@@ -73,27 +110,24 @@ export class Game1F extends Phaser.Scene {
             .refreshBody();
         }
 
-        // --- COORDENADAS A TU GUSTO ---
         const paulinePos = { x: 390, y: 240 };
         const marioPos   = { x: 600, y: 225 };
         const heartPos   = { x: 500, y: 200 };
 
-        // 2) Pauline, Mario y Heart en las posiciones definidas
         this.add.image(paulinePos.x, paulinePos.y, 'pauline').setScale(2.6);
         this.add.image(marioPos.x,   marioPos.y,   'mario')
           .setScale(2.8)
           .setFlipX(true);
         this.add.image(heartPos.x,   heartPos.y,   'heart').setScale(2.7);
 
-        // 3) Dos segundos después volvemos a MainMenu
-        this.time.delayedCall(2000, () => {
+        // 4 s después, ir a FinalScore
+        this.time.delayedCall(4000, () => {
           this.scene.start('FinalScore', { totalScore: this.totalScore });
         });
       });
     });
   }
 
-  // Generador de escaleras
   generateLadder(x, y, numSteps = 7, stepSpacing = 16, key = 'ladderG', scale = 1) {
     for (let i = 0; i < numSteps; i++) {
       this.stairs

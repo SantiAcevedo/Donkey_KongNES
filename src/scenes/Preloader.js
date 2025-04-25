@@ -32,9 +32,9 @@ export class Preloader extends Phaser.Scene {
         });
 
         //cargar spritesheet de donkey kong
-        this.load.spritesheet('dk', '/assets/Donkey_Kong.png', {
-            frameWidth: 46, // Ancho de cada frame
-            frameHeight: 31 // Alto de cada frame
+        this.load.spritesheet('dk', '/assets/Kong.png', {
+            frameWidth: 50, // Ancho de cada frame
+            frameHeight: 36 // Alto de cada frame
         });
 
         //Cargar spritesheet de Pauline
