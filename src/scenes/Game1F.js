@@ -5,9 +5,20 @@ export class Game1F extends Phaser.Scene {
     super('Game1F');
   }
 
+  init(data) {
+    // Recibimos el puntaje total desde Game1
+    this.totalScore = data.totalScore || 0;
+  }
+
   create() {
     // — Fondo & Score —
     this.cameras.main.setBackgroundColor('#00000a');
+
+    //Sound
+    this.kongLoop = this.sound.add('kong', { loop: true, volume: 1.0 });
+    this.kongLand = this.sound.add('kong', { loop: false, volume: 1.0 });
+    this.kongLoop.setRate(1.2);
+    this.kongLoop.play();
 
     // — Plataformas base —
     this.platforms = this.physics.add.staticGroup();
@@ -78,28 +89,34 @@ export class Game1F extends Phaser.Scene {
     this.dk.play('dk_idle');
     this.dkHasLanded = false;
 
-    // — Tras 2 s, DK “cae” y jugamos la animación de caída —
-    this.time.delayedCall(2000, () => {
-      this.dk.body.setAllowGravity(true);
-      this.dk.play('dk_fall_frame');
+          // — Tras 2 s, DK “cae” y jugamos la animación de caída —
+      this.time.delayedCall(2000, () => {
+        // Detén el loop de "kong" justo antes de la caída
+        this.kongLoop.stop();
 
-      // Collider para detectar el aterrizaje
-      this.physics.add.collider(
-        this.dk, this.platforms,
-        () => {
-          if (this.dkHasLanded) return;
-          this.dkHasLanded = true;
+        this.dk.body.setAllowGravity(true);
+        this.dk.play('dk_fall_frame');
 
-          // 0.5 s con frame 8
-          this.dk.play('dk_land_frame');
-          this.time.delayedCall(500, () => {
-            // luego animación 8→9
-            this.dk.play('dk_post_land');
-          });
-        },
-        null,
-        this
-      );
+        // Collider para detectar el aterrizaje
+        this.physics.add.collider(
+          this.dk, this.platforms,
+          () => {
+            if (this.dkHasLanded) return;
+            this.dkHasLanded = true;
+
+            // aquí, el one-shot
+            this.kongLand.play();
+
+            // 0.5 s con frame 8
+            this.dk.play('dk_land_frame');
+            this.time.delayedCall(500, () => {
+              // luego animación 8→9
+              this.dk.play('dk_post_land');
+            });
+          },
+          null,
+          this
+        );
 
       // 1.5 s después generamos la nueva plataforma y personajes
       this.time.delayedCall(1500, () => {
@@ -120,8 +137,9 @@ export class Game1F extends Phaser.Scene {
           .setFlipX(true);
         this.add.image(heartPos.x,   heartPos.y,   'heart').setScale(2.7);
 
-        // 4 s después, ir a FinalScore
-        this.time.delayedCall(4000, () => {
+        const finalSound = this.sound.add('final');
+        finalSound.play();
+        finalSound.once('complete', () => {
           this.scene.start('FinalScore', { totalScore: this.totalScore });
         });
       });

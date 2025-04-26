@@ -443,37 +443,51 @@ export class Game extends Phaser.Scene {
     }
 
     hitByBarrel(mario, barrel) {
-      // Guardamos posición de impacto si la quieres usar para partículas o efectos
       const posX = barrel.x;
       const posY = barrel.y;
       barrel.destroy();
   
-      // Si tiene martillo, le damos puntos y salimos
+      // Con martillo: +500 y floating text
       if (this.hasHammer) {
           this.score += 500;
           this.scoreText.setText(`I- ${this.score}`);
+  
+          // Texto flotante +500
+          const pts = this.add.text(posX, posY, '500', {
+              font: '34px Arial',
+              fill: '#ffffff',
+              stroke: '#000000',
+              strokeThickness: 5
+          }).setOrigin(0.5);
+  
+          this.tweens.add({
+              targets: pts,
+              y:     posY - 50,
+              alpha: 0,
+              duration: 800,
+              ease: 'Power1',
+              onComplete: () => pts.destroy()
+          });
+  
           return;
       }
   
-      // Reducir vida y actualizar texto
+      // Sin martillo: pierdes vida
       this.lives--;
       this.livesText.setText(` ${this.lives}`);
   
-      // Si ya no quedan vidas, pasamos a GameOver
       if (this.lives <= 0) {
           return this.scene.start('GameOver');
       }
   
-      // NUEVO: reproducir sonido de muerte una sola vez
+      // Sonido de muerte
       this.deathSound.play();
   
-      // Bloquear movimiento y reproducir animación de muerte
+      // Animación de muerte
       this.canMove = false;
       this.mario.body.setVelocity(0, 0);
       this.mario.body.setAllowGravity(false);
       this.mario.play('mario_death');
-  
-      // Al completar la animación, reseteamos posición y volvemos a permitir movimiento
       this.mario.once('animationcomplete-mario_death', () => {
           this.mario.body.setAllowGravity(true);
           this.mario.setPosition(250, 710);
@@ -482,8 +496,6 @@ export class Game extends Phaser.Scene {
           this.mario.play('idle');
       });
   }
-  
-    
 
     pickUpHammer(mario, hammer) {
       hammer.disableBody(true, true);

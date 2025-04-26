@@ -41,6 +41,7 @@ export class Game1 extends Phaser.Scene {
   this.runSound    = this.sound.add('run',       { loop: true,  volume: 0.5 });
   this.jumpSound   = this.sound.add('jump',      { loop: false, volume: 1.0 });
   this.hammerSound = this.sound.add('hammer',    { loop: true,  volume: 1.0 });
+  this.jumpBarrelSound = this.sound.add('jumpBarrel', { loop: false, volume: 1.0 });
 
     // — Plataformas —
     this.platforms = this.physics.add.staticGroup();
@@ -371,9 +372,14 @@ pickUpHammer(mario, hammer) {
     const falling = m.body.velocity.y > 0;
     const above   = m.body.bottom <= b.body.top + 10;
     if (falling && above) {
+      // 1) sonido
+      this.jumpBarrelSound.play();
+  
+      // 2) recogida y puntuación
       b.disableBody(true,true);
       this.score += 100;
       this.scoreText.setText('I- ' + this.score);
+      
       const pts = this.add.text(b.x, b.y, '100', {
         font:'34px Arial', fill:'#ff0',
         stroke:'#000', strokeThickness:3
@@ -385,18 +391,22 @@ pickUpHammer(mario, hammer) {
       });
       if (this.buttons.countActive(true) === 0) {
         this.time.delayedCall(1000, () => {
-    // — NUEVO: enviamos totalScore a la siguiente escena —
-    this.scene.start('Game1F', { totalScore: this.score });
-          });
+          this.sound.stopAll();
+          this.scene.start('Game1F', { totalScore: this.score });
+        });
       }
     }
   }
 
   // — Recoger umbrella —
   collectUmbrella(m, u) {
-    u.disableBody(true,true);
-    this.score += 800;
-    this.scoreText.setText('I- ' + this.score);
+  // 1) sonido
+  this.jumpBarrelSound.play();
+
+  // 2) recogida y puntuación
+  u.disableBody(true,true);
+  this.score += 800;
+  this.scoreText.setText('I- ' + this.score);
     const pts = this.add.text(u.x, u.y, '800', {
       font:'34px Arial', fill:'#0ff',
       stroke:'#000', strokeThickness:3
@@ -410,9 +420,13 @@ pickUpHammer(mario, hammer) {
 
   // — Recoger bag —
   collectBag(m, b) {
-    b.disableBody(true,true);
-    this.score += 800;
-    this.scoreText.setText('I- ' + this.score);
+  // 1) sonido
+  this.jumpBarrelSound.play();
+
+  // 2) recogida y puntuación
+  b.disableBody(true,true);
+  this.score += 800;
+  this.scoreText.setText('I- ' + this.score);
     const pts = this.add.text(b.x, b.y, '800', {
       font:'34px Arial', fill:'#f0f',
       stroke:'#000', strokeThickness:3

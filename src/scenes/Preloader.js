@@ -77,6 +77,8 @@ export class Preloader extends Phaser.Scene {
     this.load.audio ('win1', '/music/assets_audio_roundClear.mp3');
     this.load.audio ('dead', '/music/assets_audio_hit.mp3');
     this.load.audio ('stage2', '/music/stage2.mp3');
+    this.load.audio ('kong', '/music/assets_audio_kong.mp3');
+    this.load.audio ('final', '/music/assets_audio_allRoundsCleared.mp3');
     }
     
 
