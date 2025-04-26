@@ -79,6 +79,7 @@ export class Preloader extends Phaser.Scene {
     this.load.audio ('stage2', '/music/stage2.mp3');
     this.load.audio ('kong', '/music/assets_audio_kong.mp3');
     this.load.audio ('final', '/music/assets_audio_allRoundsCleared.mp3');
+    this.load.audio ('hithammer', '/music/hithammer.mp3');
     }
     
 

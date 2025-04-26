@@ -141,8 +141,8 @@ export class Game extends Phaser.Scene {
           // NUEVO: animación de muerte de Mario
           this.anims.create({
             key: 'mario_death',
-            frames: this.anims.generateFrameNumbers('mario', { frames: [7] }), // ajusta el frame de muerte
-            frameRate: 1,
+            frames: this.anims.generateFrameNumbers('mario', { start: 16, end: 19 }), // ajusta el frame de muerte
+            frameRate: 6,
             repeat: 0
         });
 
@@ -177,7 +177,8 @@ export class Game extends Phaser.Scene {
         this.hammerSound = this.sound.add('hammer', { loop: true, volume: 1 });
         this.jumpBarrelSound  = this.sound.add('jumpBarrel');  
         this.win1Sound        = this.sound.add('win1'); 
-        this.deathSound = this.sound.add('dead');  
+        this.deathSound = this.sound.add('dead'); 
+        this.hitHammerSound = this.sound.add('hithammer', { loop: false, volume: 1.0 });
 
         // Crear a Donkey Kong
         this.dk = this.physics.add.sprite(200, 120, 'dk').setScale(3);
@@ -446,38 +447,41 @@ export class Game extends Phaser.Scene {
       const posX = barrel.x;
       const posY = barrel.y;
       barrel.destroy();
-  
-      // Con martillo: +500 y floating text
+    
+      // Con martillo: +500, floating text y sonido de hithammer
       if (this.hasHammer) {
-          this.score += 500;
-          this.scoreText.setText(`I- ${this.score}`);
-  
-          // Texto flotante +500
-          const pts = this.add.text(posX, posY, '500', {
-              font: '34px Arial',
-              fill: '#ffffff',
-              stroke: '#000000',
-              strokeThickness: 5
-          }).setOrigin(0.5);
-  
-          this.tweens.add({
-              targets: pts,
-              y:     posY - 50,
-              alpha: 0,
-              duration: 800,
-              ease: 'Power1',
-              onComplete: () => pts.destroy()
-          });
-  
-          return;
+        // 1) sonar hithammer
+        this.hitHammerSound.play();
+    
+        // 2) sumar puntos
+        this.score += 500;
+        this.scoreText.setText(`I- ${this.score}`);
+    
+        // 3) floating text
+        const pts = this.add.text(posX, posY, '500', {
+          font: '34px Arial',
+          fill: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 5
+        }).setOrigin(0.5);
+    
+        this.tweens.add({
+          targets: pts,
+          y:     posY - 50,
+          alpha: 0,
+          duration: 800,
+          ease: 'Power1',
+          onComplete: () => pts.destroy()
+        });
+    
+        return;
       }
-  
-      // Sin martillo: pierdes vida
+    
+      // Sin martillo: pierdes vida…
       this.lives--;
       this.livesText.setText(` ${this.lives}`);
-  
       if (this.lives <= 0) {
-          return this.scene.start('GameOver');
+        return this.scene.start('GameOver');
       }
   
       // Sonido de muerte
