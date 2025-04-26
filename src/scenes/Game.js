@@ -25,6 +25,17 @@ export class Game extends Phaser.Scene {
         // Crear grupo de plataformas
         this.platforms = this.physics.add.staticGroup();
 
+        // 1. Reproducir 'levelIntro' apenas arranca la escena
+        this.levelIntro = this.sound.add('levelIntro');
+        this.levelIntro.play();
+
+        // 2. Cuando termine 'levelIntro', arrancar en bucle 'stage'
+        this.levelIntro.once('complete', () => {
+            this.stageMusic = this.sound.add('stage', { loop: true });
+            this.stageMusic.play();
+        });
+
+
         // Agregar suelo principal (incremento de 95 para evitar solapamientos)
         for (let x = 0; x < 1024; x += 95) {
             this.platforms.create(x, 770, 'floorbricks');
@@ -160,6 +171,13 @@ export class Game extends Phaser.Scene {
         // Teclado
         this.cursors = this.input.keyboard.createCursorKeys();
         this.mario.play('idle');
+
+        this.runSound = this.sound.add('run', { loop: true, volume: 0.5 });
+        this.jumpSound = this.sound.add('jump'); 
+        this.hammerSound = this.sound.add('hammer', { loop: true, volume: 1 });
+        this.jumpBarrelSound  = this.sound.add('jumpBarrel');  
+        this.win1Sound        = this.sound.add('win1'); 
+        this.deathSound = this.sound.add('dead');  
 
         // Crear a Donkey Kong
         this.dk = this.physics.add.sprite(200, 120, 'dk').setScale(3);
@@ -425,66 +443,99 @@ export class Game extends Phaser.Scene {
     }
 
     hitByBarrel(mario, barrel) {
+      // Guardamos posición de impacto si la quieres usar para partículas o efectos
       const posX = barrel.x;
       const posY = barrel.y;
       barrel.destroy();
-
+  
+      // Si tiene martillo, le damos puntos y salimos
       if (this.hasHammer) {
-        this.score += 500;
-        this.scoreText.setText(`I- ${this.score}`);
-        return;
-    }
-    // NUEVO: reducir vida y actualizar contador
-    this.lives--;
-    this.livesText.setText(` ${this.lives}`);
-
-    if (this.lives <= 0) {
-        return this.scene.start('GameOver');
-    }
-
-    // NUEVO: bloquear movimiento y reproducir muerte
-    this.canMove = false;
-    this.mario.body.setVelocity(0, 0);
-    this.mario.body.setAllowGravity(false);
-    this.mario.play('mario_death');
-    this.mario.once('animationcomplete-mario_death', () => {
-        this.mario.body.setAllowGravity(true);
-        this.mario.setPosition(250, 710);
-        this.mario.body.setVelocity(0, 0);
-        this.canMove = true;
-        this.mario.play('idle');
-    });
-}
+          this.score += 500;
+          this.scoreText.setText(`I- ${this.score}`);
+          return;
+      }
+  
+      // Reducir vida y actualizar texto
+      this.lives--;
+      this.livesText.setText(` ${this.lives}`);
+  
+      // Si ya no quedan vidas, pasamos a GameOver
+      if (this.lives <= 0) {
+          return this.scene.start('GameOver');
+      }
+  
+      // NUEVO: reproducir sonido de muerte una sola vez
+      this.deathSound.play();
+  
+      // Bloquear movimiento y reproducir animación de muerte
+      this.canMove = false;
+      this.mario.body.setVelocity(0, 0);
+      this.mario.body.setAllowGravity(false);
+      this.mario.play('mario_death');
+  
+      // Al completar la animación, reseteamos posición y volvemos a permitir movimiento
+      this.mario.once('animationcomplete-mario_death', () => {
+          this.mario.body.setAllowGravity(true);
+          this.mario.setPosition(250, 710);
+          this.mario.body.setVelocity(0, 0);
+          this.canMove = true;
+          this.mario.play('idle');
+      });
+  }
+  
     
 
     pickUpHammer(mario, hammer) {
-        hammer.disableBody(true, true);
-        this.hasHammer = true;
-        // Reproducir la animación idle con martillo (sin tint)
-        mario.play('hammerIdle', true);
-        this.time.delayedCall(8000, () => {
-            this.hasHammer = false;
-            mario.play('idle', true);
-        });
+      hammer.disableBody(true, true);
+      this.hasHammer = true;
+
+      // sonar hammer mientras dure el power-up
+      this.hammerSound.play();
+
+      // animación con martillo
+      mario.play('hammerIdle', true);
+
+      // al expirar el power-up (8 s), detener sonido y volver a idle
+      this.time.delayedCall(8000, () => {
+          this.hasHammer = false;
+          this.hammerSound.stop();
+          mario.play('idle', true);
+      });
     }
     // Nuevo método
     triggerRescue() {
-        this.reachedPauline = true;
-
-        // Pausar físicas
-        this.physics.world.pause();
-
-        // Pausar animaciones clave
-        this.dk.anims.pause();
-        this.pauline.anims.pause();
-        this.barrels.children.iterate(b => b.anims.pause());
-        this.mario.anims.pause();
-
-        // Tras 3 segundos, cambiar de escena
-        this.time.delayedCall(3000, () => {
-            this.scene.start('Game1', { prevScore: this.score });
-        });
-    }
+      // 0) Parar el sonido de correr y congelar la animación de Mario
+      if (this.runSound.isPlaying) {
+          this.runSound.stop();
+      }
+      this.mario.anims.pause();
+  
+      // 1) Parar la música de stage
+      if (this.stageMusic && this.stageMusic.isPlaying) {
+          this.stageMusic.stop();
+      }
+  
+      // 2) Bloquear input y movimiento
+      this.canMove = false;
+      this.mario.setVelocity(0, 0);
+      this.barrels.children.iterate(b => b.body.setVelocity(0, 0));
+      this.fires?.children.iterate(f => f.body.setVelocity(0, 0));
+  
+      // 3) Pausar otras animaciones visibles
+      this.dk.anims.pause();
+      this.pauline.anims.pause();
+      this.barrels.children.iterate(b => b.anims.pause());
+  
+      // 4) Reproducir audio de victoria
+      this.win1Sound.play();
+  
+      // 5) Al completar el audio, pasar a Game1
+      this.win1Sound.once('complete', () => {
+          this.scene.start('Game1', { prevScore: this.score });
+      });
+   }
+  
+  
     handlePlatformCollision(mario, platform) {
         // Aquí solo reaccionas a la colisión superior.
         // Si quieres, puedes quitar este método y manejar todo desde el processCallback.
@@ -534,15 +585,35 @@ export class Game extends Phaser.Scene {
         if (this.cursors.left.isDown  || padMove.x < -0.1) {
           vx = -160;
           this.mario.setFlipX(true);
+          
         } else if (this.cursors.right.isDown || padMove.x > 0.1) {
           vx = 160;
           this.mario.setFlipX(false);
         }
         this.mario.setVelocityX(vx);
+        
+
+        // Sonido de carrera
+        if (vx !== 0 && this.mario.body.onFloor()) {
+          // Si está corriendo en el suelo y no suena aún, arranca el 'run'
+          if (!this.runSound.isPlaying) {
+              this.runSound.play();
+          }
+        } else {
+          // Si se detiene o está en el aire, para el 'run'
+          if (this.runSound.isPlaying) {
+              this.runSound.stop();
+          }
+        }
+
       
         // 5) Salto (tecla ↑ o push stick hacia arriba)
         const jumpPressed = (this.cursors.up.isDown || padJump) && this.mario.body.onFloor();
         if (jumpPressed) {
+
+              // reproducir sólo un disparo de salto
+                this.jumpSound.play();
+
           this.mario.setVelocityY(-290);
           this.isFloating = true;
           this.mario.body.setGravityY(100);
@@ -576,6 +647,8 @@ export class Game extends Phaser.Scene {
             this.score += 100;
             this.scoreText.setText('I- ' + this.score);
             barrel.scored = true;
+
+            this.jumpBarrelSound.play();
       
             const pts = this.add.text(barrel.x, barrel.y, '100', {
               font: '34px Arial',
@@ -597,17 +670,15 @@ export class Game extends Phaser.Scene {
       
         // 7) Proximidad a Pauline y rescate
         if (!this.marioFoundPauline) {
-          const distance = Phaser.Math.Distance.Between(
-            this.mario.x, this.mario.y,
-            this.pauline.x, this.pauline.y
+          const dist = Phaser.Math.Distance.Between(
+              this.mario.x, this.mario.y,
+              this.pauline.x, this.pauline.y
           );
-          if (distance < 100) {
-            this.marioFoundPauline = true;
-            this.physics.pause();
-            this.mario.anims.pause();
-            this.time.delayedCall(8000, () => this.scene.start('Game1'));
+          if (dist < 100) {
+              this.marioFoundPauline = true;
+              this.triggerRescue();
           }
-        }
+      }
         const dist = Phaser.Math.Distance.Between(
           this.mario.x, this.mario.y,
           this.pauline.x, this.pauline.y

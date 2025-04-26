@@ -66,6 +66,17 @@ export class Preloader extends Phaser.Scene {
 
 
     //AUDIO
+    this.load.audio('menu', '/music/assets_audio_menu.mp3');
+    this.load.audio('start', '/music/assets_audio_start.mp3');
+    this.load.audio ('levelIntro', '/music/assets_audio_levelIntro.mp3');
+    this.load.audio ('stage', '/music/assets_audio_stageTheme.mp3');
+    this.load.audio ('run', '/music/assets_audio_run.mp3');
+    this.load.audio ('jump', '/music/assets_audio_NES - Donkey Kong - Sound Effects_jump.wav');
+    this.load.audio ('hammer', '/music/assets_audio_hammer.mp3');
+    this.load.audio ('jumpBarrel', '/music/assets_audio_NES - Donkey Kong - Sound Effects_scoreUp.wav');
+    this.load.audio ('win1', '/music/assets_audio_roundClear.mp3');
+    this.load.audio ('dead', '/music/assets_audio_hit.mp3');
+    this.load.audio ('stage2', '/music/stage2.mp3');
     }
     
 

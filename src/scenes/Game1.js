@@ -27,6 +27,21 @@ export class Game1 extends Phaser.Scene {
     { fontSize: '38px', fill: '#fff' }
   );
 
+  // 1) Suena levelIntro
+  this.levelIntro = this.sound.add('levelIntro');
+  this.levelIntro.play();
+
+  // 2) Cuando termine levelIntro, arranca stage2 en bucle (sin modificar velocidad)
+  this.levelIntro.once('complete', () => {
+    this.stageMusic = this.sound.add('stage2', { loop: true });
+    this.stageMusic.setVolume(1.8);
+    this.stageMusic.play();
+    
+  });
+  this.runSound    = this.sound.add('run',       { loop: true,  volume: 0.5 });
+  this.jumpSound   = this.sound.add('jump',      { loop: false, volume: 1.0 });
+  this.hammerSound = this.sound.add('hammer',    { loop: true,  volume: 1.0 });
+
     // — Plataformas —
     this.platforms = this.physics.add.staticGroup();
     for (let x = 0; x < 1024; x += 95) {
@@ -251,18 +266,35 @@ this.anims.create({
       this.mario.body.setAllowGravity(true);
     }
   
-    // 3) Movimiento horizontal (tecla o stick)
-    if (this.cursors.left.isDown  || padMove.x < -0.1) {
-      vx = -160;
-      this.mario.setFlipX(true);
-    } else if (this.cursors.right.isDown || padMove.x > 0.1) {
-      vx = 160;
-      this.mario.setFlipX(false);
-    }
-    this.mario.setVelocityX(vx);
+// 3) Movimiento horizontal (tecla o stick)
+if (this.cursors.left.isDown || padMove.x < -0.1) {
+  vx = -160;
+  this.mario.setFlipX(true);
+} 
+else if (this.cursors.right.isDown || padMove.x > 0.1) {
+  vx = 160;
+  this.mario.setFlipX(false);
+}
+this.mario.setVelocityX(vx);
+
+// Manejo del sonido de correr
+if (vx !== 0 && this.mario.body.onFloor()) {
+  // Estoy moviéndome en el suelo
+  if (!this.runSound.isPlaying) {
+    this.runSound.play();
+  }
+} else {
+  // Estoy quieto o en el aire
+  if (this.runSound.isPlaying) {
+    this.runSound.stop();
+  }
+}
+
   
     // 4) Salto (tecla ↑ o push stick hacia arriba)
-    if ((this.cursors.up.isDown || padJump) && onFloor) {
+    const jumpPressed = (this.cursors.up.isDown  || padJump) && onFloor;
+    if (jumpPressed) {
+      this.jumpSound.play();
       this.mario.setVelocityY(-290);
     }
   
@@ -288,15 +320,21 @@ pickUpHammer(mario, hammer) {
   hammer.disableBody(true, true);
   this.hasHammer = true;
   mario.play('hammerIdle', true);
+    // sonar hammer mientras dure el power-up
+    this.hammerSound.play();
+
+    // animación con martillo
+    mario.play('hammerIdle', true);
 
   // Cambiar animación de todos los flames a flameScared
   this.flames.children.iterate(f => {
     if (f && f.anims) f.play('flameScared');
   });
 
-  this.time.delayedCall(5000, () => {
+  this.time.delayedCall(8000, () => {
     this.hasHammer = false;
     mario.play('idle', true);
+    this.hammerSound.stop();
 
     // Volver a la animación normal
     this.flames.children.iterate(f => {

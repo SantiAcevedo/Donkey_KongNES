@@ -19,14 +19,12 @@ export class InputManager {
     if (pads.length > 0) {
       this.pad = pads[0];
       console.log("🎮 Gamepad ya conectado:", this.pad.id);
-      this.scene.add.text(10, 10, "Gamepad conectado!", { color: "#fff" });
     }
 
     // Escucha futuras conexiones
     this.scene.input.gamepad.once("connected", (pad) => {
       console.log("🎮 Gamepad conectado:", pad.id);
       this.pad = pad;
-      this.scene.add.text(10, 10, "Gamepad conectado!", { color: "#fff" });
     });
   }
 
