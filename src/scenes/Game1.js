@@ -352,7 +352,7 @@ pickUpHammer(mario, hammer) {
       this.hitHammerSound.play();
       flame.destroy();
       this.score += 500;
-      this.scoreText.setText('I- ' + this.score);
+      this.scoreText.setText('I-' + this.score);
       // texto flotante +500...
       const pts = this.add.text(flame.x, flame.y, '500', {
         font: '34px Arial', fill: '#ff0',
