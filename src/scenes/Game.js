@@ -96,7 +96,7 @@ export class Game extends Phaser.Scene {
         
 
         // Configuración de la puntuación
-        this.scoreText = this.add.text(120, 40, 'I- 0', { fontSize: '38px', fill: '#fff' });
+        this.scoreText = this.add.text(120, 40, 'I-0', { fontSize: '38px', fill: '#fff' });
         this.liveText = this.add.text(672, 70, 'M', { fontSize: '38px', fill: '#fff' });
         this.liveText = this.add.text(648, 82, '( )', { fontSize: '40px', fill: '#fff' });
         this.livesText = this.add.text(650, 100, ` ${this.lives}`, { fontSize: '38px', fill: '#fff' });
@@ -455,7 +455,7 @@ export class Game extends Phaser.Scene {
     
         // 2) sumar puntos
         this.score += 500;
-        this.scoreText.setText(`I- ${this.score}`);
+        this.scoreText.setText(`I-${this.score}`);
     
         // 3) floating text
         const pts = this.add.text(posX, posY, '500', {
@@ -661,7 +661,7 @@ export class Game extends Phaser.Scene {
             Math.abs(this.mario.x - barrel.x) < 50
           ) {
             this.score += 100;
-            this.scoreText.setText('I- ' + this.score);
+            this.scoreText.setText('I-' + this.score);
             barrel.scored = true;
 
             this.jumpBarrelSound.play();

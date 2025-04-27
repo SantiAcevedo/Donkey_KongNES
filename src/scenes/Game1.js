@@ -7,6 +7,7 @@ export class Game1 extends Phaser.Scene {
     this.skipJumpAnim = false;
     this.score = 0;
     this.hasHammer = false;  // estado del martillo
+    this.lives = 3;          // vidas de Mario
   }
 
   init(data) {
@@ -16,6 +17,7 @@ export class Game1 extends Phaser.Scene {
     }
 
   create() {
+    this.sound.stopAll();
     this.inputManager = new InputManager(this);
     this.inputManager.setup();
     // — Fondo & Score —
@@ -23,9 +25,12 @@ export class Game1 extends Phaser.Scene {
   // — NUEVO: utilizamos this.score (ya tiene prevScore) —
   this.scoreText = this.add.text(
     120, 40,
-    'I- ' + this.score,    // ahora muestra la puntuación acumulada
+    'I-' + this.score,    // ahora muestra la puntuación acumulada
     { fontSize: '38px', fill: '#fff' }
   );
+  this.liveText = this.add.text(672, 70, 'M', { fontSize: '38px', fill: '#fff' });
+  this.liveText = this.add.text(648, 82, '( )', { fontSize: '40px', fill: '#fff' });
+  this.livesText = this.add.text(650, 100, ` ${this.lives}`, { fontSize: '38px', fill: '#fff' });
 
   // 1) Suena levelIntro
   this.levelIntro = this.sound.add('levelIntro');
@@ -364,9 +369,22 @@ pickUpHammer(mario, hammer) {
         onComplete: () => pts.destroy()
       });
     } else {
+      // pierde una vida
+      this.lives--;
+      this.livesText.setText(` ${this.lives}`);
+      // flash de daño
       m.setTint(0xff0000);
       this.time.delayedCall(300, () => m.clearTint());
-      this.scene.restart();
+
+      if (this.lives <= 0) {
+        // termina el juego
+        this.sound.stopAll();
+        this.scene.start('GameOver');
+      } else {
+        // reinicia escena
+        this.sound.stopAll();
+        this.scene.restart();
+      }
     }
   }
 
@@ -381,7 +399,7 @@ pickUpHammer(mario, hammer) {
       // 2) recogida y puntuación
       b.disableBody(true,true);
       this.score += 100;
-      this.scoreText.setText('I- ' + this.score);
+      this.scoreText.setText('I-' + this.score);
       
       const pts = this.add.text(b.x, b.y, '100', {
         font:'34px Arial', fill:'#ff0',
@@ -409,7 +427,7 @@ pickUpHammer(mario, hammer) {
   // 2) recogida y puntuación
   u.disableBody(true,true);
   this.score += 800;
-  this.scoreText.setText('I- ' + this.score);
+  this.scoreText.setText('I-' + this.score);
     const pts = this.add.text(u.x, u.y, '800', {
       font:'34px Arial', fill:'#0ff',
       stroke:'#000', strokeThickness:3
@@ -429,7 +447,7 @@ pickUpHammer(mario, hammer) {
   // 2) recogida y puntuación
   b.disableBody(true,true);
   this.score += 800;
-  this.scoreText.setText('I- ' + this.score);
+  this.scoreText.setText('I-' + this.score);
     const pts = this.add.text(b.x, b.y, '800', {
       font:'34px Arial', fill:'#f0f',
       stroke:'#000', strokeThickness:3
