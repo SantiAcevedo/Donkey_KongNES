@@ -42,6 +42,7 @@ export class Game1 extends Phaser.Scene {
   this.jumpSound   = this.sound.add('jump',      { loop: false, volume: 1.0 });
   this.hammerSound = this.sound.add('hammer',    { loop: true,  volume: 1.0 });
   this.jumpBarrelSound = this.sound.add('jumpBarrel', { loop: false, volume: 1.0 });
+  this.hitHammerSound = this.sound.add('hithammer', { loop: false, volume: 1.0 });
 
     // — Plataformas —
     this.platforms = this.physics.add.staticGroup();
@@ -346,7 +347,9 @@ pickUpHammer(mario, hammer) {
 
   // — Choque con flames respeta martillo —
   hitByFlame(m, flame) {
-    if (this.hasHammer) {
+  if (this.hasHammer) {
+      // — NUEVO: reproducir sonido al golpear con martillo —
+      this.hitHammerSound.play();
       flame.destroy();
       this.score += 500;
       this.scoreText.setText('I- ' + this.score);
