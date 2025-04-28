@@ -15,6 +15,8 @@ export class FinalScore extends Phaser.Scene {
 
     // Fondo
     this.cameras.main.setBackgroundColor('#00000a');
+    // Fondo
+    this.add.image(510, 380, 'pause').setOrigin(0.5).setScale(2.5);
 
     // Texto grande centrado
     this.add.text(width / 2, height / 2 - 50,

@@ -22,6 +22,7 @@ export class Preloader extends Phaser.Scene {
         this.load.image('umbrella', '/assets/umbrella.png');
         this.load.image('bag', '/assets/bag.png');
         this.load.image('heart', '/assets/heart.png');
+        this.load.image('pause', '/assets/pause_background.png');
 
     //SPRITESHEETS
 
